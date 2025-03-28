@@ -192,8 +192,14 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   readOnly = false,
   availableTools = []
 }) => {
-  // Calculate positions for nodes
-  const calculateNodePositions = (workflowNodes: WorkflowNode[]): { nodes: Node[], edges: Edge[] } => {
+  // Calculate positions for nodes - this is defined outside the InteractiveFlow component 
+  // because it doesn't need access to the component's state
+  const calculateNodePositions = (
+    workflowNodes: WorkflowNode[], 
+    handleConfigureNode?: (nodeId: string) => void,
+    handleDeleteNode?: (nodeId: string) => void,
+    readOnly = false
+  ): { nodes: Node[], edges: Edge[] } => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
     
@@ -253,8 +259,8 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             tool: node.tool,
             function: node.function,
             params: node.params,
-            onConfigureNode: !readOnly ? handleConfigureNode : undefined,
-            onDeleteNode: !readOnly ? handleDeleteNode : undefined,
+            onConfigureNode: !readOnly && handleConfigureNode ? handleConfigureNode : undefined,
+            onDeleteNode: !readOnly && handleDeleteNode ? handleDeleteNode : undefined,
           },
           position: { x, y },
         });
@@ -278,7 +284,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   // Convert initial workflow nodes to React Flow format
-  const { nodes: initialFlowNodes, edges: initialFlowEdges } = calculateNodePositions(initialNodes);
+  const { nodes: initialFlowNodes, edges: initialFlowEdges } = calculateNodePositions(initialNodes, undefined, undefined, readOnly);
   
   // Component with interactive controls (nested to use ReactFlow hooks)
   const InteractiveFlow = () => {
@@ -421,7 +427,11 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       // Update layout
       setTimeout(() => {
         const workflowNodes = getWorkflowNodesFromFlow([...nodes, newNode], edges);
-        const { nodes: layoutedNodes, edges: layoutedEdges } = calculateNodePositions(workflowNodes);
+        const { nodes: layoutedNodes, edges: layoutedEdges } = calculateNodePositions(
+          workflowNodes, 
+          handleConfigureNode, 
+          handleDeleteNode
+        );
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
         fitView({ padding: 0.2 });
