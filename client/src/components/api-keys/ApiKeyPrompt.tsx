@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,26 +16,57 @@ const ApiKeyPrompt = ({ onKeysConfigured, onSkip }: ApiKeyPromptProps) => {
   const [openaiKey, setOpenaiKey] = useState("");
   const [anthropicKey, setAnthropicKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasOpenAI, setHasOpenAI] = useState(isAIProviderConfigured("openai"));
+  const [hasAnthropic, setHasAnthropic] = useState(isAIProviderConfigured("anthropic"));
   const { toast } = useToast();
   
-  const hasOpenAI = isAIProviderConfigured("openai");
-  const hasAnthropic = isAIProviderConfigured("anthropic");
   const initialTab = hasOpenAI ? "anthropic" : "openai";
+  
+  // Initialize API keys and environment from localStorage on component mount
+  useEffect(() => {
+    // Initialize window.env object
+    (window as any).env = (window as any).env || {};
+    
+    // Set up OpenAI key if available
+    const savedOpenAIKey = localStorage.getItem("OPENAI_API_KEY");
+    if (savedOpenAIKey) {
+      (window as any).env.OPENAI_API_KEY = savedOpenAIKey;
+      setHasOpenAI(true);
+    }
+    
+    // Set up Anthropic key if available
+    const savedAnthropicKey = localStorage.getItem("ANTHROPIC_API_KEY");
+    if (savedAnthropicKey) {
+      (window as any).env.ANTHROPIC_API_KEY = savedAnthropicKey;
+      setHasAnthropic(true);
+    }
+    
+    // Auto proceed if keys are already configured
+    if ((savedOpenAIKey || savedAnthropicKey) && onKeysConfigured) {
+      onKeysConfigured();
+    }
+  }, [onKeysConfigured]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Store API keys as environment variables
+      // Store API keys securely for this session only
       if (openaiKey) {
+        localStorage.setItem("OPENAI_API_KEY", openaiKey);
+        // Make available to the environment
         (window as any).env = (window as any).env || {};
-        (window as any).env.VITE_OPENAI_API_KEY = openaiKey;
+        (window as any).env.OPENAI_API_KEY = openaiKey;
+        setHasOpenAI(true);
       }
       
       if (anthropicKey) {
+        localStorage.setItem("ANTHROPIC_API_KEY", anthropicKey);
+        // Make available to the environment
         (window as any).env = (window as any).env || {};
-        (window as any).env.VITE_ANTHROPIC_API_KEY = anthropicKey;
+        (window as any).env.ANTHROPIC_API_KEY = anthropicKey;
+        setHasAnthropic(true);
       }
       
       toast({

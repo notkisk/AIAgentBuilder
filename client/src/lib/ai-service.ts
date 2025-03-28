@@ -3,12 +3,42 @@ import Anthropic from "@anthropic-ai/sdk";
 import { WorkflowNodes } from "@shared/schema";
 import { apiRequest } from "./queryClient";
 
-// Helper function to get API key from environment
+// Helper function to get API key from environment or local storage
 function getAPIKey(provider: AIProvider): string {
   if (provider === "openai") {
-    return process.env.OPENAI_API_KEY || "";
+    // Check browser environment first
+    if (typeof window !== "undefined") {
+      // Check window.env (from API key prompt)
+      if ((window as any).env?.OPENAI_API_KEY) {
+        return (window as any).env.OPENAI_API_KEY;
+      }
+      
+      // Check localStorage
+      const storedKey = localStorage.getItem("OPENAI_API_KEY");
+      if (storedKey) {
+        return storedKey;
+      }
+    }
+    
+    // Fall back to env variables
+    return import.meta.env.OPENAI_API_KEY || "";
   } else if (provider === "anthropic") {
-    return process.env.ANTHROPIC_API_KEY || "";
+    // Check browser environment first
+    if (typeof window !== "undefined") {
+      // Check window.env (from API key prompt)
+      if ((window as any).env?.ANTHROPIC_API_KEY) {
+        return (window as any).env.ANTHROPIC_API_KEY;
+      }
+      
+      // Check localStorage
+      const storedKey = localStorage.getItem("ANTHROPIC_API_KEY");
+      if (storedKey) {
+        return storedKey;
+      }
+    }
+    
+    // Fall back to env variables
+    return import.meta.env.ANTHROPIC_API_KEY || "";
   }
   return "";
 }
@@ -40,10 +70,49 @@ export type AIProvider = "openai" | "anthropic";
  */
 export function isAIProviderConfigured(provider: AIProvider): boolean {
   if (provider === "openai") {
-    return !!process.env.OPENAI_API_KEY;
+    // Check multiple sources for API key
+    if (import.meta.env.OPENAI_API_KEY) {
+      return true;
+    }
+    
+    // Check browser environment
+    if (typeof window !== "undefined") {
+      // Check window.env (from API key prompt)
+      if ((window as any).env?.OPENAI_API_KEY) {
+        return true;
+      }
+      
+      // Check localStorage
+      const storedKey = localStorage.getItem("OPENAI_API_KEY");
+      if (storedKey) {
+        return true;
+      }
+    }
+    
+    return false;
   } else if (provider === "anthropic") {
-    return !!process.env.ANTHROPIC_API_KEY;
+    // Check multiple sources for API key
+    if (import.meta.env.ANTHROPIC_API_KEY) {
+      return true;
+    }
+    
+    // Check browser environment
+    if (typeof window !== "undefined") {
+      // Check window.env (from API key prompt)
+      if ((window as any).env?.ANTHROPIC_API_KEY) {
+        return true;
+      }
+      
+      // Check localStorage
+      const storedKey = localStorage.getItem("ANTHROPIC_API_KEY");
+      if (storedKey) {
+        return true;
+      }
+    }
+    
+    return false;
   }
+  
   return false;
 }
 
