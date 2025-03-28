@@ -339,7 +339,7 @@ export default function Create() {
               </div>
               <div className="p-1 bg-gray-50 dark:bg-gray-900 rounded-md h-[500px] border">
                 <WorkflowEditor 
-                  initialNodes={workflowNodes}
+                  initialNodes={workflowNodes || []}
                   onNodesChange={handleNodesChange}
                   availableTools={availableTools}
                 />
@@ -353,7 +353,7 @@ export default function Create() {
                   !agentDescription || 
                   !workflowName || 
                   !workflowDescription || 
-                  workflowNodes.length === 0 || 
+                  !workflowNodes || workflowNodes.length === 0 || 
                   createMutation.isPending
                 }
                 onClick={() => createMutation.mutate()}

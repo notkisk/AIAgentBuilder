@@ -389,7 +389,7 @@ Should I create this agent for you?
       setAgentDescription(agentSuggestion.description);
       
       // If no workflow has been created in the context, create one with basic info
-      if (workflowNodes.length === 0) {
+      if (!workflowNodes || workflowNodes.length === 0) {
         setWorkflowName(`${agentSuggestion.name} Workflow`);
         setWorkflowDescription(`Workflow for ${agentSuggestion.name}: ${agentSuggestion.description}`);
       }

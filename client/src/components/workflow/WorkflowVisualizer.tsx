@@ -19,7 +19,7 @@ export default function WorkflowVisualizer({ nodes, activeNodeId }: WorkflowVisu
   
   // Draw the workflow visualization on canvas
   useEffect(() => {
-    if (!canvasRef.current || nodes.length === 0) return;
+    if (!canvasRef.current || !nodes || nodes.length === 0) return;
     
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');

@@ -284,7 +284,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   };
 
   // Convert initial workflow nodes to React Flow format
-  const { nodes: initialFlowNodes, edges: initialFlowEdges } = calculateNodePositions(initialNodes, undefined, undefined, readOnly);
+  const { nodes: initialFlowNodes, edges: initialFlowEdges } = calculateNodePositions(initialNodes || [], undefined, undefined, readOnly);
   
   // Component with interactive controls (nested to use ReactFlow hooks)
   const InteractiveFlow = () => {
