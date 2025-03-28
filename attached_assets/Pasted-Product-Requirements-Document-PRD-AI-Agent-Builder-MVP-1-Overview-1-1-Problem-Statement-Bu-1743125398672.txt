@@ -1,0 +1,111 @@
+Product Requirements Document (PRD)
+
+AI Agent Builder (MVP)
+
+1. Overview
+
+1.1. Problem Statement
+
+Building AI-driven automation workflows today requires manual setup (e.g., dragging nodes in n8n or writing scripts). Many users want a fully AI-assisted way to create agents without manual configuration.
+
+1.2. Solution
+
+An AI-powered agent creation tool where users describe what they need in natural language, and the system:
+
+Interprets the prompt (e.g., "Create an AI assistant that organizes my emails and sets reminders.")
+
+Selects the right tools/APIs (e.g., Gmail API, Calendar API, LLM processing)
+
+Auto-generates an operational AI agent
+
+(Future) Allows manual editing of nodes in a visual interface
+
+1.3. Target Audience
+
+Non-technical users who want AI-powered automations.
+
+Developers looking to prototype AI agents quickly.
+
+Businesses that need AI agents for workflow automation.
+
+2. Features & Functionalities
+
+2.1. Core Features (MVP)
+
+✅ Natural Language-Based Agent Creation
+
+Users input a prompt like:
+
+"Monitor a website for price changes and notify me on Telegram."
+
+"Summarize my daily emails and store them in Notion."
+
+AI processes the intent and constructs an agent with predefined tools.
+
+✅ Predefined Tools & API Integrations (Similar to n8n, Zapier, LangChain)
+
+Core tools for automation, including:
+
+LLM Processing (GPT, Claude, local models)
+
+Web Scraper (fetch & process data from websites)
+
+Email & Calendar APIs (Google, Outlook, etc.)
+
+Data Processors (summarization, translation, filtering)
+
+Database & Storage (Firebase, PostgreSQL, Vector DBs)
+
+Messaging & Notifications (Telegram, Discord, Slack)
+
+HTTP Requests (to interact with external APIs)
+
+✅ Agent Execution & Logging
+
+Agents can run manually, on a schedule, or based on triggers.
+
+Users can monitor execution logs.
+
+✅ Basic UI for Prompt-Generated Agents
+
+Clean UI with TailwindCSS + ShadCN UI.
+
+Displays:
+
+Agent Name & Functionality
+
+Connected APIs & Tools
+
+Execution Logs
+
+2.2. Future Features (Post-MVP)
+
+🚀 Editable Node-Based UI (like n8n but AI-assisted)
+🚀 Multi-Agent Collaboration (Agents communicate & share data)
+🚀 Custom Code Blocks for Advanced Users
+🚀 Prebuilt AI Agent Templates (e.g., "Social Media Manager", "Research Assistant")
+🚀 Marketplace for Sharing & Selling AI Agents
+
+3. UI/UX Design (TailwindCSS + ShadCN UI for a Modern Look)
+
+3.1. Home Page
+
+✅ Hero Section:
+
+"Create AI Agents from Just a Prompt."
+
+Call-to-action: "Start Building"
+✅ Features Section:
+
+Icons & descriptions of core functionalities.
+✅ Example Agents Preview
+
+3.2. Agent Builder UI
+
+✅ Prompt Input Box:
+
+“Describe your AI agent…”
+✅ Generated Agent Panel:
+
+Shows agent name, functions, connected tools.
+✅ Execution Logs
