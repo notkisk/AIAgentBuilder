@@ -1,7 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAgentSchema, insertLogSchema } from "@shared/schema";
+import { 
+  insertAgentSchema, 
+  insertLogSchema, 
+  insertWorkflowSchema, 
+  insertToolSchema, 
+  WorkflowNodesSchema 
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
@@ -105,8 +111,231 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // Workflows API
+  app.get("/api/workflows", async (req, res) => {
+    try {
+      const workflows = await storage.getWorkflows();
+      res.json(workflows);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workflows" });
+    }
+  });
+
+  app.get("/api/workflows/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const workflow = await storage.getWorkflow(id);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      res.json(workflow);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workflow" });
+    }
+  });
+
+  app.post("/api/workflows", async (req, res) => {
+    try {
+      const parsedData = insertWorkflowSchema.safeParse(req.body);
+      
+      if (!parsedData.success) {
+        return res.status(400).json({ message: "Invalid workflow data", errors: parsedData.error.format() });
+      }
+      
+      // Validate the workflow nodes structure
+      const nodesValidation = WorkflowNodesSchema.safeParse(parsedData.data.nodes);
+      if (!nodesValidation.success) {
+        return res.status(400).json({ message: "Invalid workflow nodes structure", errors: nodesValidation.error.format() });
+      }
+      
+      const workflow = await storage.createWorkflow(parsedData.data);
+      res.status(201).json(workflow);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create workflow" });
+    }
+  });
+
+  app.patch("/api/workflows/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      // If nodes are being updated, validate their structure
+      if (updates.nodes) {
+        const nodesValidation = WorkflowNodesSchema.safeParse(updates.nodes);
+        if (!nodesValidation.success) {
+          return res.status(400).json({ message: "Invalid workflow nodes structure", errors: nodesValidation.error.format() });
+        }
+      }
+      
+      const workflow = await storage.updateWorkflow(id, updates);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      res.json(workflow);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update workflow" });
+    }
+  });
+
+  app.delete("/api/workflows/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteWorkflow(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete workflow" });
+    }
+  });
+
+  // Tools API
+  app.get("/api/tools", async (req, res) => {
+    try {
+      const tools = await storage.getTools();
+      res.json(tools);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch tools" });
+    }
+  });
+
+  app.get("/api/tools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const tool = await storage.getTool(id);
+      
+      if (!tool) {
+        return res.status(404).json({ message: "Tool not found" });
+      }
+      
+      res.json(tool);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch tool" });
+    }
+  });
+
+  app.get("/api/tools/name/:name", async (req, res) => {
+    try {
+      const name = req.params.name;
+      const tool = await storage.getToolByName(name);
+      
+      if (!tool) {
+        return res.status(404).json({ message: "Tool not found" });
+      }
+      
+      res.json(tool);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch tool by name" });
+    }
+  });
+
+  app.post("/api/tools", async (req, res) => {
+    try {
+      const parsedData = insertToolSchema.safeParse(req.body);
+      
+      if (!parsedData.success) {
+        return res.status(400).json({ message: "Invalid tool data", errors: parsedData.error.format() });
+      }
+      
+      const tool = await storage.createTool(parsedData.data);
+      res.status(201).json(tool);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create tool" });
+    }
+  });
+
+  app.patch("/api/tools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const tool = await storage.updateTool(id, updates);
+      
+      if (!tool) {
+        return res.status(404).json({ message: "Tool not found" });
+      }
+      
+      res.json(tool);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update tool" });
+    }
+  });
+
+  app.delete("/api/tools/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteTool(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Tool not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete tool" });
+    }
+  });
+
+  // AI workflow generator API
+  app.post("/api/generate-workflow", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ message: "Invalid prompt. A string prompt is required." });
+      }
+      
+      // This will be implemented later with the actual AI workflow generator
+      // For now, return a sample workflow structure
+      
+      const generatedWorkflow = {
+        name: "Generated Workflow",
+        description: `Workflow generated from prompt: ${prompt}`,
+        prompt,
+        nodes: {
+          nodes: [
+            {
+              id: "1",
+              tool: "webscraper",
+              function: "fetchPage",
+              params: { url: "https://example.com" },
+              next: "2"
+            },
+            {
+              id: "2",
+              tool: "chatgpt",
+              function: "summarizeText",
+              params: { text: "$1.output" },
+              next: "3"
+            },
+            {
+              id: "3",
+              tool: "gmail",
+              function: "sendEmail",
+              params: { 
+                to: "user@example.com", 
+                subject: "Website Summary", 
+                body: "$2.output" 
+              }
+            }
+          ]
+        },
+        status: "inactive"
+      };
+      
+      res.json(generatedWorkflow);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate workflow" });
+    }
+  });
 
   const httpServer = createServer(app);
 

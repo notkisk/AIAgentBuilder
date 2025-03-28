@@ -1,0 +1,128 @@
+🔹 Updated Prompt: AI-Powered Workflow Generator for Modular Tool Library
+📝 Overview
+We are building a fully modular, node-based automation system that allows users to connect various tools (Slack, Gmail, OpenAI, Web Scraping, etc.) to automate workflows.
+
+🔹 The system should also include an AI-powered workflow generator, which automatically maps out a workflow based on a natural language prompt from the user.
+
+For example:
+🗣 User prompt: "When I receive an email from my boss, summarize it and send it to Slack."
+🤖 AI-generated workflow:
+📩 Read Gmail → ✨ Summarize with ChatGPT → 💬 Send to Slack
+
+🔹 How Replit Should Implement This
+1️⃣ Modular Tool System
+Each tool should be implemented as a standalone module, exposing essential functions via a universal API format.
+✅ Each tool is a self-contained file (tool-gmail.js, tool-slack.js, etc.).
+✅ Each tool has defined inputs, outputs, and triggers to connect with others.
+✅ Follows a standardized structure to allow dynamic execution.
+
+2️⃣ Node-Based Architecture
+The system should be node-based, meaning:
+✅ Each tool acts as a node in a workflow graph.
+✅ Users can visually connect multiple tools (drag-and-drop UI in the future).
+✅ Database stores workflows as JSON objects that define tool connections.
+✅ Nodes execute sequentially based on data dependencies.
+
+3️⃣ AI-Powered Workflow Generator
+Users will describe their desired automation in plain English, and our AI will:
+1️⃣ Analyze the prompt using NLP (OpenAI or Llama 3).
+2️⃣ Identify required tools (e.g., Gmail, ChatGPT, Slack).
+3️⃣ Map out a workflow (convert text into JSON format).
+4️⃣ Generate an executable node graph (ready for automation).
+
+🔹 Example Input & Output:
+
+🗣 User Prompt:
+"Every morning, fetch the latest news about AI from Google, summarize it, and send it to my email."
+
+🤖 AI-Generated Workflow:
+🌍 Web Scraper (Google Search: AI news) → 🤖 Summarize with ChatGPT → 📩 Send Email
+
+json
+Copy
+Edit
+{
+  "workflow": {
+    "nodes": [
+      {
+        "id": "1",
+        "tool": "webscraper",
+        "function": "extractData",
+        "params": { "url": "https://news.google.com/search?q=AI", "selector": ".article" },
+        "next": "2"
+      },
+      {
+        "id": "2",
+        "tool": "chatgpt",
+        "function": "summarizeText",
+        "params": { "text": "$1.output" },
+        "next": "3"
+      },
+      {
+        "id": "3",
+        "tool": "gmail",
+        "function": "sendEmail",
+        "params": { "to": "user@example.com", "subject": "AI News Summary", "body": "$2.output" }
+      }
+    ]
+  }
+}
+🚀 This allows users to create workflows effortlessly!
+
+🔹 Core Tool Library & Functions
+📩 Gmail API Tool (tool-gmail.js)
+✅ readEmails(filters): Reads emails based on filters (e.g., unread, from:John Doe).
+✅ sendEmail(to, subject, body): Sends an email.
+✅ deleteEmail(emailId): Deletes an email.
+✅ markAsRead(emailId): Marks an email as read.
+✅ extractAttachments(emailId): Gets attachments from an email.
+
+💬 Slack API Tool (tool-slack.js)
+✅ sendMessage(channel, message): Sends a message to a Slack channel.
+✅ createChannel(name, isPrivate): Creates a new Slack channel.
+✅ addUserToChannel(channel, user): Adds a user to a channel.
+✅ fetchMessages(channel, limit): Fetches messages from a Slack channel.
+
+🤖 OpenAI GPT Tool (tool-chatgpt.js)
+✅ generateResponse(prompt, options): Sends a prompt to GPT and gets a response.
+✅ summarizeText(text): Summarizes long text.
+✅ extractKeywords(text): Extracts important keywords from text.
+
+📆 Google Calendar API Tool (tool-calendar.js)
+✅ createEvent(title, startTime, endTime, attendees): Creates an event.
+✅ fetchEvents(dateRange): Fetches events for a specific date range.
+✅ deleteEvent(eventId): Deletes an event.
+✅ updateEvent(eventId, updates): Updates an event.
+
+🌐 Web Scraping Tool (tool-webscraper.js)
+✅ fetchPage(url): Fetches raw HTML content from a page.
+✅ extractData(url, selector): Extracts specific data from a page.
+✅ screenshotPage(url): Takes a screenshot of a webpage.
+
+🔗 HTTP Request Tool (tool-http.js)
+✅ get(url, headers): Makes a GET request.
+✅ post(url, data, headers): Makes a POST request.
+✅ put(url, data, headers): Makes a PUT request.
+✅ delete(url, headers): Makes a DELETE request.
+
+📂 Database Connector (tool-database.js)
+✅ query(sql, params): Executes a SQL query.
+✅ insert(table, data): Inserts data into a table.
+✅ update(table, conditions, updates): Updates records in a table.
+
+🔹 How the Node-Based Workflow Works
+✅ Each tool is a node with inputs, outputs, and triggers.
+✅ Nodes are connected dynamically, forming a logical automation flow.
+✅ User inputs a prompt → AI maps out the workflow automatically.
+
+🔹 Future Expansion
+🚀 Phase 1: Implement core toolset & manual workflow creation.
+🚀 Phase 2: Build the AI-powered workflow generator.
+🚀 Phase 3: Develop a drag-and-drop workflow editor UI.
+🚀 Phase 4: Open-source the library & allow community contributions.
+
+🔹 Why This is Game-Changing
+✅ No-code workflow automation (like Zapier, but AI-driven).
+✅ Scalable & modular (new tools can be added easily).
+✅ AI-powered workflow generation (turn prompts into workflows).
+✅ Seamless integrations (Slack, Gmail, OpenAI, APIs, DBs, and more).

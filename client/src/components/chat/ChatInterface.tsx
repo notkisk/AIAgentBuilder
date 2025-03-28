@@ -7,6 +7,8 @@ import { useAgent } from "@/contexts/AgentContext";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { generateWorkflow, getToolRecommendations, isAIProviderConfigured } from "@/lib/ai-service";
+import ApiKeyPrompt from "@/components/api-keys/ApiKeyPrompt";
 
 type MessageRole = "user" | "assistant";
 
@@ -40,14 +42,54 @@ export default function ChatInterface() {
   const [inputValue, setInputValue] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [agentSuggestion, setAgentSuggestion] = useState<AgentSuggestion | null>(null);
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { createAgent } = useAgent();
   const { toast } = useToast();
+  
+  // Check if we have AI providers configured
+  const hasOpenAI = isAIProviderConfigured("openai");
+  const hasAnthropic = isAIProviderConfigured("anthropic");
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Handle API key configuration
+  const handleKeysConfigured = () => {
+    setShowApiKeyPrompt(false);
+    toast({
+      title: "AI keys configured",
+      description: "Your AI keys have been configured. You'll get better workflow generation now!",
+    });
+    
+    // Add a message to inform the user
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "Thanks for configuring your AI keys! I can now provide more accurate workflow recommendations. Please tell me what you'd like your agent to do.",
+        timestamp: new Date(),
+      },
+    ]);
+  };
+  
+  const handleSkipKeyConfig = () => {
+    setShowApiKeyPrompt(false);
+    
+    // Add a message to inform the user
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: "No problem! I'll still help you create an agent, but I'll use simplified rule-based recommendations. You can always add AI keys later in settings.",
+        timestamp: new Date(),
+      },
+    ]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +117,28 @@ export default function ChatInterface() {
           timestamp: new Date(),
         },
       ]);
+
+      // Check if we need to prompt for API keys
+      const hasAiKeys = hasOpenAI || hasAnthropic;
+      if (!hasAiKeys && !showApiKeyPrompt) {
+        // Remove the typing indicator
+        setMessages((prevMessages) => prevMessages.filter((msg) => msg.id !== "typing"));
+        
+        // Suggest configuring AI keys for better results
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: "To provide the most accurate agent recommendations, I can use AI models like OpenAI or Anthropic. Would you like to configure an API key?",
+            timestamp: new Date(),
+          },
+        ]);
+        
+        setShowApiKeyPrompt(true);
+        setIsProcessing(false);
+        return;
+      }
 
       // Process the user's input to create an agent
       const response = await processAgentRequest(userMessage.content);
@@ -123,121 +187,177 @@ export default function ChatInterface() {
     message: string;
     suggestion: AgentSuggestion;
   }> => {
-    // Simple client-side processing for now
-    // In a real implementation, this would call the backend which uses OpenAI/Anthropic
+    // Check if we have AI providers configured
+    const hasOpenAI = isAIProviderConfigured("openai");
+    const hasAnthropic = isAIProviderConfigured("anthropic");
     
-    // Extract potential agent name and tools based on keywords
-    const keywords = {
-      email: ["email", "gmail", "mail", "inbox", "message"],
-      slack: ["slack", "channel", "workspace", "notify", "notification"],
-      web: ["website", "web", "url", "scrape", "page", "monitor"],
-      calendar: ["calendar", "schedule", "event", "appointment", "meeting"],
-      openai: ["ai", "gpt", "openai", "generate", "analyze"],
-      database: ["database", "sql", "db", "store", "postgresql", "postgres"],
-    };
+    // Determine which AI provider to use
+    const provider = hasOpenAI ? "openai" : hasAnthropic ? "anthropic" : null;
     
-    // Determine which tools might be needed based on the prompt
-    const toolMatches: Record<string, boolean> = {
-      "Gmail API": false,
-      "Slack API": false,
-      "Web Scraper": false,
-      "Calendar API": false,
-      "OpenAI API": false,
-      "PostgreSQL": false,
-    };
-    
-    const promptLower = userPrompt.toLowerCase();
-    
-    for (const [category, terms] of Object.entries(keywords)) {
-      if (terms.some(term => promptLower.includes(term))) {
-        switch (category) {
-          case "email":
-            toolMatches["Gmail API"] = true;
-            break;
-          case "slack":
-            toolMatches["Slack API"] = true;
-            break;
-          case "web":
-            toolMatches["Web Scraper"] = true;
-            break;
-          case "calendar":
-            toolMatches["Calendar API"] = true;
-            break;
-          case "openai":
-            toolMatches["OpenAI API"] = true;
-            break;
-          case "database":
-            toolMatches["PostgreSQL"] = true;
-            break;
+    try {
+      // If AI provider is available, use it for tool recommendations
+      let recommendedTools: string[] = [];
+      let workflowConfig: { name: string; description: string; nodes: any } | null = null;
+      
+      if (provider) {
+        // Get tool recommendations from AI
+        recommendedTools = await getToolRecommendations(userPrompt, provider);
+        
+        // Also generate a workflow for later use
+        try {
+          workflowConfig = await generateWorkflow(userPrompt, provider);
+        } catch (error) {
+          console.warn("Failed to generate workflow:", error);
+        }
+      } else {
+        // Fallback to rule-based tools recommendation if no AI provider
+        // Extract potential agent name and tools based on keywords
+        const keywords = {
+          email: ["email", "gmail", "mail", "inbox", "message"],
+          slack: ["slack", "channel", "workspace", "notify", "notification"],
+          web: ["website", "web", "url", "scrape", "page", "monitor"],
+          calendar: ["calendar", "schedule", "event", "appointment", "meeting"],
+          openai: ["ai", "gpt", "openai", "generate", "analyze"],
+          database: ["database", "sql", "db", "store", "postgresql", "postgres"],
+        };
+        
+        // Determine which tools might be needed based on the prompt
+        const toolMatches: Record<string, boolean> = {
+          "Gmail API": false,
+          "Slack API": false,
+          "Web Scraper": false,
+          "Calendar API": false,
+          "OpenAI API": false,
+          "PostgreSQL": false,
+        };
+        
+        const promptLower = userPrompt.toLowerCase();
+        
+        for (const [category, terms] of Object.entries(keywords)) {
+          if (terms.some(term => promptLower.includes(term))) {
+            switch (category) {
+              case "email":
+                toolMatches["Gmail API"] = true;
+                break;
+              case "slack":
+                toolMatches["Slack API"] = true;
+                break;
+              case "web":
+                toolMatches["Web Scraper"] = true;
+                break;
+              case "calendar":
+                toolMatches["Calendar API"] = true;
+                break;
+              case "openai":
+                toolMatches["OpenAI API"] = true;
+                break;
+              case "database":
+                toolMatches["PostgreSQL"] = true;
+                break;
+            }
+          }
+        }
+        
+        // Get the matched tools as an array
+        recommendedTools = Object.entries(toolMatches)
+          .filter(([_, isMatched]) => isMatched)
+          .map(([toolName, _]) => toolName);
+        
+        // Ensure at least one tool is selected
+        if (recommendedTools.length === 0) {
+          recommendedTools.push("OpenAI API");
         }
       }
-    }
-    
-    // Get the matched tools as an array
-    const matchedTools = Object.entries(toolMatches)
-      .filter(([_, isMatched]) => isMatched)
-      .map(([toolName, _]) => toolName);
-    
-    // Ensure at least one tool is selected
-    if (matchedTools.length === 0) {
-      matchedTools.push("OpenAI API");
-    }
-    
-    // Generate a name based on the prompt
-    let nameGuess = "";
-    if (promptLower.includes("monitor") || promptLower.includes("track")) {
-      nameGuess = promptLower.includes("email") 
-        ? "Email Monitor" 
-        : promptLower.includes("website") 
-          ? "Website Monitor" 
-          : "Activity Monitor";
-    } else if (promptLower.includes("summarize") || promptLower.includes("summary")) {
-      nameGuess = "Content Summarizer";
-    } else if (promptLower.includes("notify") || promptLower.includes("alert")) {
-      nameGuess = "Alert Agent";
-    } else {
-      nameGuess = "Custom Agent";
-    }
-    
-    // Prepare the API integrations that need to be set up
-    const setupNeeded = matchedTools.map(tool => ({
-      name: tool,
-      type: tool === "Gmail API" || tool === "Calendar API" 
-        ? "oauth" as const
-        : "api_key" as const,
-      isConfigured: false
-    }));
-    
-    // Create the suggestion object
-    const suggestion: AgentSuggestion = {
-      name: nameGuess,
-      description: userPrompt,
-      tools: matchedTools,
-      recommendedSetup: setupNeeded
-    };
-    
-    // Prepare the response message
-    const toolsList = matchedTools.map(tool => `• ${tool}`).join("\n");
-    const setupList = setupNeeded.map(setup => 
-      `[Connect ${setup.name.replace(" API", "")}] (${setup.type === "oauth" ? "OAuth Login" : "API Key"})`
-    ).join(" ");
-    
-    const responseMessage = `
+      
+      // Generate a name based on the prompt or use the AI-generated one
+      let nameGuess = workflowConfig?.name || "Custom Agent";
+      if (!workflowConfig) {
+        const promptLower = userPrompt.toLowerCase();
+        if (promptLower.includes("monitor") || promptLower.includes("track")) {
+          nameGuess = promptLower.includes("email") 
+            ? "Email Monitor" 
+            : promptLower.includes("website") 
+              ? "Website Monitor" 
+              : "Activity Monitor";
+        } else if (promptLower.includes("summarize") || promptLower.includes("summary")) {
+          nameGuess = "Content Summarizer";
+        } else if (promptLower.includes("notify") || promptLower.includes("alert")) {
+          nameGuess = "Alert Agent";
+        }
+      }
+      
+      // Prepare the API integrations that need to be set up
+      const setupNeeded = recommendedTools.map(tool => ({
+        name: tool,
+        type: tool === "Gmail API" || tool === "Calendar API" 
+          ? "oauth" as const
+          : "api_key" as const,
+        isConfigured: false
+      }));
+      
+      // Create the suggestion object
+      const suggestion: AgentSuggestion = {
+        name: nameGuess,
+        description: workflowConfig?.description || userPrompt,
+        tools: recommendedTools,
+        recommendedSetup: setupNeeded
+      };
+      
+      // Prepare the response message
+      const toolsList = recommendedTools.map(tool => `• ${tool}`).join("\n");
+      const setupList = setupNeeded.map(setup => 
+        `[Connect ${setup.name.replace(" API", "")}] (${setup.type === "oauth" ? "OAuth Login" : "API Key"})`
+      ).join(" ");
+      
+      let aiNoteMessage = "";
+      if (!provider) {
+        aiNoteMessage = "\n\n⚠️ Note: For more accurate recommendations, configure OpenAI or Anthropic API keys in settings.";
+      }
+      
+      const responseMessage = `
 ✅ I can create an agent to ${userPrompt.toLowerCase()}.
 
 Based on your description, I recommend using these tools:
 ${toolsList}
 
 ⚙️ Required setup:
-${setupList}
+${setupList}${aiNoteMessage}
 
 Should I create this agent for you?
-    `.trim();
-    
-    return {
-      message: responseMessage,
-      suggestion
-    };
+      `.trim();
+      
+      return {
+        message: responseMessage,
+        suggestion
+      };
+    } catch (error) {
+      console.error("Error in processAgentRequest:", error);
+      
+      // Fallback if anything went wrong
+      const suggestion: AgentSuggestion = {
+        name: "Custom Agent",
+        description: userPrompt,
+        tools: ["OpenAI API"],
+        recommendedSetup: [{
+          name: "OpenAI API",
+          type: "api_key",
+          isConfigured: false
+        }]
+      };
+      
+      return {
+        message: `
+I can create a basic agent based on your description. 
+I'll set it up to use OpenAI for text processing.
+
+⚙️ Required setup:
+[Connect OpenAI] (API Key)
+
+Should I create this agent for you?
+        `.trim(),
+        suggestion
+      };
+    }
   };
 
   const handleCreateAgent = async () => {
@@ -287,6 +407,18 @@ Should I create this agent for you?
 
   return (
     <div className="flex flex-col h-full">
+      {/* API Key Configuration Modal */}
+      {showApiKeyPrompt && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md p-4">
+            <ApiKeyPrompt
+              onKeysConfigured={handleKeysConfigured}
+              onSkip={handleSkipKeyConfig}
+            />
+          </div>
+        </div>
+      )}
+      
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
@@ -370,10 +502,10 @@ Should I create this agent for you?
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Describe your AI agent..."
-            disabled={isProcessing}
+            disabled={isProcessing || showApiKeyPrompt}
             className="flex-1"
           />
-          <Button type="submit" disabled={isProcessing || !inputValue.trim()}>
+          <Button type="submit" disabled={isProcessing || showApiKeyPrompt || !inputValue.trim()}>
             {isProcessing ? (
               <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             ) : (
