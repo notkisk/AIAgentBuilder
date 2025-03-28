@@ -1,17 +1,221 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import ChatInterface from "@/components/chat/ChatInterface";
+import WorkflowEditor from "@/components/workflow/WorkflowEditor";
 import { isAIProviderConfigured } from "@/lib/ai-service";
+import { WorkflowNode, WorkflowNodes } from "@shared/schema";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 
 export default function Create() {
   const [activeTab, setActiveTab] = useState("chat");
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
   
   // Check if we have AI providers configured
   const hasOpenAI = isAIProviderConfigured("openai");
   const hasAnthropic = isAIProviderConfigured("anthropic");
   const hasAiProvider = hasOpenAI || hasAnthropic;
+
+  // State for the visual workflow builder
+  const [workflowName, setWorkflowName] = useState("");
+  const [workflowDescription, setWorkflowDescription] = useState("");
+  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
+  const [agentName, setAgentName] = useState("");
+  const [agentDescription, setAgentDescription] = useState("");
+  
+  // Create example workflows
+  const loadExampleWebScraper = () => {
+    setAgentName("Website Content Monitor");
+    setAgentDescription("Monitors a website for changes, summarizes new content with AI, and sends email notifications");
+    setWorkflowName("Web Scraper to Email Workflow");
+    setWorkflowDescription("Scrapes website content, summarizes it with AI, and sends email notifications");
+    
+    setWorkflowNodes([
+      {
+        id: "1",
+        tool: "webscraper",
+        function: "fetchPage",
+        params: { url: "https://example.com" },
+        next: "2"
+      },
+      {
+        id: "2",
+        tool: "chatgpt",
+        function: "summarizeText",
+        params: { text: "$1.output" },
+        next: "3"
+      },
+      {
+        id: "3",
+        tool: "gmail",
+        function: "sendEmail",
+        params: { 
+          to: "user@example.com", 
+          subject: "Website Update Summary", 
+          body: "$2.output" 
+        }
+      }
+    ]);
+  };
+  
+  // Sample available tools
+  const availableTools = [
+    {
+      name: "gmail",
+      functions: [
+        {
+          name: "sendEmail",
+          description: "Sends an email to recipient",
+          parameters: {
+            to: { type: "string", description: "Recipient email" },
+            subject: { type: "string", description: "Email subject" },
+            body: { type: "string", description: "Email body content" }
+          }
+        },
+        {
+          name: "readEmails",
+          description: "Reads emails based on filters",
+          parameters: {
+            filters: { type: "string", description: "Filter string (e.g., from:example@gmail.com)" }
+          }
+        }
+      ]
+    },
+    {
+      name: "chatgpt",
+      functions: [
+        {
+          name: "generateText",
+          description: "Generates text based on a prompt",
+          parameters: {
+            prompt: { type: "string", description: "Text prompt for generation" }
+          }
+        },
+        {
+          name: "summarizeText",
+          description: "Summarizes input text",
+          parameters: {
+            text: { type: "string", description: "Text to summarize" }
+          }
+        }
+      ]
+    },
+    {
+      name: "webscraper",
+      functions: [
+        {
+          name: "fetchPage",
+          description: "Fetches a web page",
+          parameters: {
+            url: { type: "string", description: "URL to fetch" }
+          }
+        },
+        {
+          name: "extractText",
+          description: "Extracts text from HTML using selector",
+          parameters: {
+            selector: { type: "string", description: "CSS selector to extract" }
+          }
+        }
+      ]
+    },
+    {
+      name: "slack",
+      functions: [
+        {
+          name: "sendMessage",
+          description: "Sends a message to a Slack channel",
+          parameters: {
+            channel: { type: "string", description: "Channel name or ID" },
+            text: { type: "string", description: "Message text" }
+          }
+        },
+        {
+          name: "readMessages",
+          description: "Reads messages from a Slack channel",
+          parameters: {
+            channel: { type: "string", description: "Channel name or ID" },
+            count: { type: "number", description: "Number of messages to read" }
+          }
+        }
+      ]
+    }
+  ];
+  
+  // Handle workflow node changes
+  const handleNodesChange = (nodes: WorkflowNode[]) => {
+    setWorkflowNodes(nodes);
+  };
+  
+  // Create agent and workflow mutation
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      // First create the workflow
+      const workflowResponse = await apiRequest('/api/workflows', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: workflowName,
+          description: workflowDescription,
+          nodes: {
+            nodes: workflowNodes
+          }
+        })
+      });
+      
+      if (!workflowResponse.ok) {
+        const error = await workflowResponse.json();
+        throw new Error(error.message || 'Failed to create workflow');
+      }
+      
+      const workflow = await workflowResponse.json();
+      
+      // Then create the agent linked to the workflow
+      const agentResponse = await apiRequest('/api/agents', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: agentName,
+          description: agentDescription,
+          prompt: `Visually created agent: ${agentDescription}`,
+          tools: Array.from(new Set(workflowNodes.map(node => node.tool))),
+          workflowId: workflow.id,
+          status: 'inactive'
+        })
+      });
+      
+      if (!agentResponse.ok) {
+        const error = await agentResponse.json();
+        throw new Error(error.message || 'Failed to create agent');
+      }
+      
+      return await agentResponse.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Agent created successfully",
+        description: `Your agent "${agentName}" is ready to use.`,
+        variant: "default",
+      });
+      
+      // Navigate to the agent detail page
+      navigate(`/agents/${data.id}`);
+    },
+    onError: (error) => {
+      toast({
+        title: "Creation failed",
+        description: error.message || "Failed to create agent",
+        variant: "destructive",
+      });
+    }
+  });
   
   return (
     <div className="flex flex-col h-full">
@@ -42,6 +246,7 @@ export default function Create() {
       >
         <TabsList className="mb-4 w-auto self-start">
           <TabsTrigger value="chat">Chat Builder</TabsTrigger>
+          <TabsTrigger value="visual">Visual Builder</TabsTrigger>
           <TabsTrigger value="examples">Examples</TabsTrigger>
           <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
         </TabsList>
@@ -51,6 +256,101 @@ export default function Create() {
             <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
               <ChatInterface />
             </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="visual" className="flex-1 flex flex-col data-[state=active]:flex data-[state=inactive]:hidden">
+          <Card className="flex-1 flex flex-col">
+            <CardHeader>
+              <CardTitle>Visual Workflow Builder</CardTitle>
+              <CardDescription>
+                Visually design your agent's workflow by adding and connecting tool nodes.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="agent-name">Agent Name</Label>
+                    <Input 
+                      id="agent-name" 
+                      placeholder="My Agent" 
+                      value={agentName}
+                      onChange={(e) => setAgentName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="agent-description">Agent Description</Label>
+                    <Textarea 
+                      id="agent-description" 
+                      placeholder="Describe what this agent does" 
+                      className="min-h-[80px]"
+                      value={agentDescription}
+                      onChange={(e) => setAgentDescription(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="workflow-name">Workflow Name</Label>
+                    <Input 
+                      id="workflow-name" 
+                      placeholder="My Workflow" 
+                      value={workflowName}
+                      onChange={(e) => setWorkflowName(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="workflow-description">Workflow Description</Label>
+                    <Textarea 
+                      id="workflow-description" 
+                      placeholder="Describe your workflow" 
+                      className="min-h-[80px]"
+                      value={workflowDescription}
+                      onChange={(e) => setWorkflowDescription(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-sm font-medium">Workflow Canvas</h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={loadExampleWebScraper}
+                  className="text-xs"
+                >
+                  Load Example Workflow
+                </Button>
+              </div>
+              <div className="p-1 bg-gray-50 dark:bg-gray-900 rounded-md h-[500px] border">
+                <WorkflowEditor 
+                  initialNodes={workflowNodes}
+                  onNodesChange={handleNodesChange}
+                  availableTools={availableTools}
+                />
+              </div>
+            </CardContent>
+            <CardFooter className="border-t pt-6 mt-4">
+              <Button 
+                className="ml-auto"
+                disabled={
+                  !agentName || 
+                  !agentDescription || 
+                  !workflowName || 
+                  !workflowDescription || 
+                  workflowNodes.length === 0 || 
+                  createMutation.isPending
+                }
+                onClick={() => createMutation.mutate()}
+              >
+                {createMutation.isPending ? "Creating..." : "Create Agent"}
+              </Button>
+            </CardFooter>
           </Card>
         </TabsContent>
         

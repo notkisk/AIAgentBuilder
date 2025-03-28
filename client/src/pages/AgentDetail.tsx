@@ -30,7 +30,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Execution, Log, NodeSchema, Workflow as WorkflowType } from "@shared/schema";
 import JsonView from '@/components/utils/JsonView';
-import WorkflowVisualizer from '@/components/workflow/WorkflowVisualizer';
+import ReactFlowVisualizer from '@/components/workflow/ReactFlowVisualizer';
 
 export default function AgentDetail() {
   const { id } = useParams();
@@ -403,8 +403,8 @@ export default function AgentDetail() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-sm font-medium text-gray-500 mb-2">Workflow Visualization</h3>
-                      <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md overflow-auto">
-                        <WorkflowVisualizer nodes={(workflow.nodes as any)?.nodes || []} />
+                      <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded-md overflow-hidden">
+                        <ReactFlowVisualizer nodes={(workflow.nodes as any)?.nodes || []} />
                       </div>
                     </div>
                     
