@@ -406,10 +406,16 @@ Should I create this agent for you?
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full relative">
+      {/* Background gradient decoration */}
+      <div className="absolute inset-0 pointer-events-none -z-10">
+        <div className="absolute left-1/4 top-1/4 w-56 h-56 bg-primary/5 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute right-1/4 bottom-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl transform translate-x-1/2 translate-y-1/2"></div>
+      </div>
+      
       {/* API Key Configuration Modal */}
       {showApiKeyPrompt && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="w-full max-w-md p-4">
             <ApiKeyPrompt
               onKeysConfigured={handleKeysConfigured}
@@ -419,44 +425,54 @@ Should I create this agent for you?
         </div>
       )}
       
+      {/* Chat Header */}
+      <div className="border-b border-gray-200/50 dark:border-gray-800/50 py-3 px-6 backdrop-blur-md bg-white/60 dark:bg-gray-900/60">
+        <h2 className="text-lg font-semibold gradient-text">AI Agent Builder</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Describe what you want your agent to do, and I'll help create it
+        </p>
+      </div>
+      
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6">
         {messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
           >
-            <div className={`flex max-w-[80%] ${message.role === "user" ? "flex-row-reverse" : ""}`}>
-              <Avatar className={`h-8 w-8 ${message.role === "user" ? "ml-2" : "mr-2"}`}>
+            <div className={`flex max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : ""}`}>
+              <Avatar className={`h-9 w-9 ${message.role === "user" ? "ml-3" : "mr-3"} shadow-md ${message.role === "user" ? "" : "ring-2 ring-primary/10"}`}>
                 {message.role === "user" ? (
-                  <div className="h-full w-full rounded-full bg-primary-500 flex items-center justify-center text-white">
+                  <div className="h-full w-full rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-medium">
                     U
                   </div>
                 ) : (
-                  <div className="h-full w-full rounded-full bg-primary-100 dark:bg-gray-700 flex items-center justify-center text-primary-600 dark:text-primary-300">
-                    AI
+                  <div className="h-full w-full rounded-full bg-gradient-to-br from-indigo-100 to-white dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                    <span className="text-primary dark:text-primary-300 font-medium">AI</span>
                   </div>
                 )}
               </Avatar>
               <div>
                 <div
-                  className={`${
-                    message.role === "user"
-                      ? "bg-primary-500 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  } rounded-lg p-3`}
+                  className={`
+                    rounded-2xl px-4 py-3 shadow-sm
+                    ${message.role === "user" 
+                      ? "bg-gradient-to-br from-primary to-purple-600 text-white" 
+                      : "glass border border-gray-200/50 dark:border-gray-800/50 text-gray-900 dark:text-gray-100"
+                    }
+                  `}
                 >
                   {message.id === "typing" ? (
-                    <div className="flex space-x-1">
-                      <div className="h-2 w-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                      <div className="h-2 w-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                      <div className="h-2 w-2 bg-current rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
+                    <div className="flex space-x-1.5 py-1">
+                      <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "0ms" }}></div>
+                      <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "150ms" }}></div>
+                      <div className="h-2 w-2 bg-current rounded-full animate-pulse" style={{ animationDelay: "300ms" }}></div>
                     </div>
                   ) : (
-                    <div className="whitespace-pre-wrap">{message.content}</div>
+                    <div className="whitespace-pre-wrap leading-relaxed">{message.content}</div>
                   )}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 px-2">
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
@@ -467,24 +483,83 @@ Should I create this agent for you?
         {/* Agent suggestion action card */}
         {agentSuggestion && (
           <div className="flex justify-start">
-            <div className="ml-10 max-w-[80%]">
-              <Card className="p-4 bg-gray-50 dark:bg-gray-800 border-primary-100 dark:border-gray-700">
-                <h4 className="font-medium mb-2">Create "{agentSuggestion.name}" Agent?</h4>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {agentSuggestion.tools.map((tool, index) => (
-                    <span
-                      key={index}
-                      className="px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-full"
-                    >
-                      {tool}
-                    </span>
-                  ))}
+            <div className="ml-12 max-w-[85%]">
+              <Card className="glass-card p-5 border border-primary/20">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-bold gradient-text">
+                    {agentSuggestion.name}
+                  </h4>
+                  <div className="px-2.5 py-1 text-xs font-medium bg-green-100/80 text-green-800 dark:bg-green-900/30 dark:text-green-300 rounded-full border border-green-200 dark:border-green-800/30">
+                    Ready
+                  </div>
                 </div>
-                <div className="flex space-x-2">
-                  <Button onClick={handleCreateAgent} disabled={isProcessing}>
-                    {isProcessing ? "Creating..." : "Create Agent"}
+                
+                <p className="text-gray-600 dark:text-gray-300 mb-5 text-sm">
+                  {agentSuggestion.description.length > 120 
+                    ? `${agentSuggestion.description.slice(0, 120)}...` 
+                    : agentSuggestion.description}
+                </p>
+                
+                <div className="mb-4">
+                  <h5 className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 font-medium mb-2">
+                    Tools
+                  </h5>
+                  <div className="flex flex-wrap gap-2">
+                    {agentSuggestion.tools.map((tool, index) => {
+                      // Tool color mapping (simplified version)
+                      const toolColors: Record<string, string> = {
+                        "Gmail": "bg-red-100/80 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800/30",
+                        "Email": "bg-red-100/80 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800/30",
+                        "OpenAI": "bg-indigo-100/80 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/30",
+                        "GPT": "bg-indigo-100/80 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/30",
+                        "Notion": "bg-gray-100/80 text-gray-800 dark:bg-gray-800/50 dark:text-gray-300 border-gray-200 dark:border-gray-700/30",
+                        "Slack": "bg-green-100/80 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800/30",
+                        "Data": "bg-purple-100/80 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-purple-200 dark:border-purple-800/30",
+                        "Calendar": "bg-blue-100/80 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800/30",
+                        "Web": "bg-cyan-100/80 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800/30",
+                        "SQL": "bg-amber-100/80 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800/30"
+                      };
+                      
+                      // Find matching tool color
+                      const toolColor = Object.entries(toolColors).find(([key]) => 
+                        tool.includes(key)
+                      )?.[1] || "bg-blue-100/80 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800/30";
+                      
+                      return (
+                        <span
+                          key={index}
+                          className={`px-2.5 py-1 text-xs font-medium ${toolColor} rounded-full border`}
+                        >
+                          {tool}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3">
+                  <Button 
+                    onClick={handleCreateAgent} 
+                    disabled={isProcessing}
+                    className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white shadow-md hover:shadow-lg transition-all"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Creating...
+                      </>
+                    ) : (
+                      "Create Agent"
+                    )}
                   </Button>
-                  <Button variant="outline" onClick={() => setAgentSuggestion(null)}>
+                  <Button 
+                    variant="outline" 
+                    className="border-gray-300 bg-white/50 dark:bg-gray-800/50 dark:border-gray-700"
+                    onClick={() => setAgentSuggestion(null)}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -492,26 +567,39 @@ Should I create this agent for you?
             </div>
           </div>
         )}
+        
         <div ref={messagesEndRef} />
       </div>
 
       {/* Chat input */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
-        <form onSubmit={handleSubmit} className="flex space-x-2">
+      <div className="px-4 pb-4 pt-2">
+        <form onSubmit={handleSubmit} className="glass-card flex items-center p-1 pl-4 pr-1 space-x-2">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Describe your AI agent..."
+            placeholder="Describe what you want your AI agent to do..."
             disabled={isProcessing || showApiKeyPrompt}
-            className="flex-1"
+            className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
           />
-          <Button type="submit" disabled={isProcessing || showApiKeyPrompt || !inputValue.trim()}>
+          <Button 
+            type="submit" 
+            size="icon"
+            disabled={isProcessing || showApiKeyPrompt || !inputValue.trim()}
+            className={`rounded-xl h-10 w-10 ${
+              inputValue.trim() 
+                ? 'bg-gradient-to-r from-primary to-purple-600 hover:shadow-md transition-all' 
+                : 'bg-gray-200 dark:bg-gray-700'
+            }`}
+          >
             {isProcessing ? (
-              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
             ) : (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
+                className="h-5 w-5 text-white"
                 viewBox="0 0 20 20"
                 fill="currentColor"
               >

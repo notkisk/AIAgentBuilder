@@ -3,11 +3,78 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --blur-background: 8px;
+  }
+
   * {
     @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    background-image: 
+      radial-gradient(at 100% 0%, hsla(260, 84%, 55%, 0.05) 0px, transparent 40%),
+      radial-gradient(at 0% 100%, hsla(280, 84%, 55%, 0.05) 0px, transparent 40%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  /* Glassmorphism base styles */
+  .glass {
+    @apply bg-white/60 dark:bg-gray-900/60 backdrop-blur-lg border border-white/20 dark:border-gray-800/20;
+  }
+  
+  .glass-card {
+    @apply glass rounded-2xl shadow-md hover:shadow-lg transition-all duration-300;
+  }
+  
+  .glass-button {
+    @apply glass rounded-xl hover:bg-white/80 dark:hover:bg-gray-800/80 transition-all duration-200;
+  }
+  
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-700;
+  }
+  
+  /* Animation utilities */
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+  
+  /* Improved scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-gray-600;
   }
 }
