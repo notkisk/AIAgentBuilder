@@ -19,13 +19,22 @@ export default function Home() {
             Build powerful AI-driven automation workflows without code. Describe what you need in natural language, 
             and we'll create a fully operational agent for you.
           </p>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            size="lg"
-            className="px-6 py-3 bg-white text-primary-600 hover:bg-gray-100 rounded-lg font-medium shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
-          >
-            Start Building
-          </Button>
+          <div className="flex space-x-4">
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              size="lg"
+              className="px-6 py-3 bg-white text-primary-600 hover:bg-gray-100 rounded-lg font-medium shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
+            >
+              Node Builder
+            </Button>
+            <Button
+              onClick={() => window.location.href = "/create"}
+              size="lg"
+              className="px-6 py-3 bg-white/90 text-primary-600 hover:bg-white rounded-lg font-medium shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
+            >
+              Chat Builder (New!)
+            </Button>
+          </div>
         </div>
       </div>
       

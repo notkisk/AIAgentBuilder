@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useLocation } from "wouter";
 
-export type CurrentView = "home" | "agents" | "tools" | "logs" | "settings";
+export type CurrentView = "home" | "agents" | "tools" | "logs" | "settings" | "create";
 
 interface AppContextType {
   darkMode: boolean;
@@ -49,6 +49,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     else if (location === "/tools") setCurrentView("tools");
     else if (location === "/logs") setCurrentView("logs");
     else if (location === "/settings") setCurrentView("settings");
+    else if (location === "/create") setCurrentView("create");
   }, [location]);
 
   // Navigate when current view changes

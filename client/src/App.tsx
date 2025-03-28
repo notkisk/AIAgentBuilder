@@ -12,6 +12,7 @@ import Agents from "./pages/Agents";
 import Tools from "./pages/Tools";
 import Logs from "./pages/Logs";
 import Settings from "./pages/Settings";
+import Create from "./pages/Create";
 import CreateAgentModal from "./components/modals/CreateAgentModal";
 
 function Router() {
@@ -27,6 +28,7 @@ function Router() {
             <Route path="/tools" component={Tools} />
             <Route path="/logs" component={Logs} />
             <Route path="/settings" component={Settings} />
+            <Route path="/create" component={Create} />
             <Route component={NotFound} />
           </Switch>
           <CreateAgentModal />
