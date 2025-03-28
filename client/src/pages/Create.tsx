@@ -14,6 +14,7 @@ import { WorkflowNode, WorkflowNodes } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
+import { useWorkflow } from "@/contexts/WorkflowContext";
 
 export default function Create() {
   const [activeTab, setActiveTab] = useState("chat");
@@ -25,12 +26,14 @@ export default function Create() {
   const hasAnthropic = isAIProviderConfigured("anthropic");
   const hasAiProvider = hasOpenAI || hasAnthropic;
 
-  // State for the visual workflow builder
-  const [workflowName, setWorkflowName] = useState("");
-  const [workflowDescription, setWorkflowDescription] = useState("");
-  const [workflowNodes, setWorkflowNodes] = useState<WorkflowNode[]>([]);
-  const [agentName, setAgentName] = useState("");
-  const [agentDescription, setAgentDescription] = useState("");
+  // Get workflow state from context
+  const { 
+    workflowName, setWorkflowName,
+    workflowDescription, setWorkflowDescription,
+    workflowNodes, setWorkflowNodes,
+    agentName, setAgentName,
+    agentDescription, setAgentDescription
+  } = useWorkflow();
   
   // Create example workflows
   const loadExampleWebScraper = () => {
@@ -155,6 +158,13 @@ export default function Create() {
   const handleNodesChange = (nodes: WorkflowNode[]) => {
     setWorkflowNodes(nodes);
   };
+  
+  // Effect to automatically switch to Visual Builder tab when workflows are loaded
+  useEffect(() => {
+    if (workflowNodes.length > 0 && activeTab === "chat") {
+      setActiveTab("visual");
+    }
+  }, [workflowNodes, activeTab]);
   
   // Create agent and workflow mutation
   const createMutation = useMutation({

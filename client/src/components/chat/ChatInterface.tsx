@@ -9,6 +9,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { generateWorkflow, getToolRecommendations, isAIProviderConfigured } from "@/lib/ai-service";
 import ApiKeyPrompt from "@/components/api-keys/ApiKeyPrompt";
+import { useWorkflow } from "@/contexts/WorkflowContext";
 
 type MessageRole = "user" | "assistant";
 
@@ -46,6 +47,14 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { createAgent } = useAgent();
   const { toast } = useToast();
+  const { 
+    workflowNodes,
+    setWorkflowName, 
+    setWorkflowDescription, 
+    setWorkflowNodes,
+    setAgentName,
+    setAgentDescription 
+  } = useWorkflow();
   
   // Check if we have AI providers configured
   const hasOpenAI = isAIProviderConfigured("openai");
@@ -206,6 +215,15 @@ export default function ChatInterface() {
         // Also generate a workflow for later use
         try {
           workflowConfig = await generateWorkflow(userPrompt, provider);
+          
+          // Update the workflow context with the generated data
+          if (workflowConfig) {
+            setWorkflowName(workflowConfig.name);
+            setWorkflowDescription(workflowConfig.description);
+            setWorkflowNodes(workflowConfig.nodes.nodes);
+            setAgentName(workflowConfig.name);
+            setAgentDescription(workflowConfig.description);
+          }
         } catch (error) {
           console.warn("Failed to generate workflow:", error);
         }
@@ -365,6 +383,16 @@ Should I create this agent for you?
     
     try {
       setIsProcessing(true);
+      
+      // Update the workflow context with the agent suggestion data
+      setAgentName(agentSuggestion.name);
+      setAgentDescription(agentSuggestion.description);
+      
+      // If no workflow has been created in the context, create one with basic info
+      if (workflowNodes.length === 0) {
+        setWorkflowName(`${agentSuggestion.name} Workflow`);
+        setWorkflowDescription(`Workflow for ${agentSuggestion.name}: ${agentSuggestion.description}`);
+      }
       
       const newAgent = await createAgent({
         name: agentSuggestion.name,

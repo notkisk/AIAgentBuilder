@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import { AppProvider } from "./contexts/AppContext";
 import { AgentProvider } from "./contexts/AgentContext";
+import { WorkflowProvider } from "./contexts/WorkflowContext";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import Home from "./pages/Home";
@@ -43,8 +44,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AppProvider>
         <AgentProvider>
-          <Router />
-          <Toaster />
+          <WorkflowProvider>
+            <Router />
+            <Toaster />
+          </WorkflowProvider>
         </AgentProvider>
       </AppProvider>
     </QueryClientProvider>
