@@ -161,7 +161,7 @@ export default function Create() {
   
   // Effect to automatically switch to Visual Builder tab when workflows are loaded
   useEffect(() => {
-    if (workflowNodes.length > 0 && activeTab === "chat") {
+    if (workflowNodes && workflowNodes.length > 0 && activeTab === "chat") {
       setActiveTab("visual");
     }
   }, [workflowNodes, activeTab]);
@@ -176,7 +176,7 @@ export default function Create() {
           name: workflowName,
           description: workflowDescription,
           nodes: {
-            nodes: workflowNodes
+            nodes: workflowNodes || []
           }
         })
       });
@@ -195,7 +195,7 @@ export default function Create() {
           name: agentName,
           description: agentDescription,
           prompt: `Visually created agent: ${agentDescription}`,
-          tools: Array.from(new Set(workflowNodes.map(node => node.tool))),
+          tools: Array.from(new Set((workflowNodes || []).map(node => node.tool))),
           workflowId: workflow.id,
           status: 'inactive'
         })
