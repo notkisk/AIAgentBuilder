@@ -23,8 +23,10 @@ export const agents = pgTable("agents", {
   description: text("description").notNull(),
   prompt: text("prompt").notNull(),
   tools: text("tools").array().notNull(),
-  status: text("status").notNull().default("inactive"),
+  status: text("status").notNull().default("inactive"),  // "inactive", "active", "running", "error"
+  workflowId: integer("workflow_id"),
   lastRun: timestamp("last_run"),
+  runCount: integer("run_count").default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -32,9 +34,12 @@ export const agents = pgTable("agents", {
 export const logs = pgTable("logs", {
   id: serial("id").primaryKey(),
   agentId: integer("agent_id").notNull(),
+  workflowId: integer("workflow_id"),
+  executionId: text("execution_id"),
   timestamp: timestamp("timestamp").notNull().defaultNow(),
-  level: text("level").notNull(),
+  level: text("level").notNull(),  // "info", "warn", "error", "debug"
   message: text("message").notNull(),
+  details: jsonb("details").default('{}'),
 });
 
 // Workflow Models
@@ -44,9 +49,23 @@ export const workflows = pgTable("workflows", {
   description: text("description").notNull(),
   prompt: text("prompt").notNull(),
   nodes: jsonb("nodes").notNull(),
-  status: text("status").notNull().default("inactive"),
+  status: text("status").notNull().default("inactive"),  // "inactive", "active", "running", "error"
   lastRun: timestamp("last_run"),
+  executionCount: integer("execution_count").default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Workflow Executions - To track specific runs of a workflow
+export const executions = pgTable("executions", {
+  id: serial("id").primaryKey(),
+  executionId: text("execution_id").notNull().unique(),
+  workflowId: integer("workflow_id").notNull(),
+  agentId: integer("agent_id").notNull(),
+  status: text("status").notNull().default("pending"),  // "pending", "running", "completed", "failed"
+  startTime: timestamp("start_time").notNull().defaultNow(),
+  endTime: timestamp("end_time"),
+  results: jsonb("results").default('{}'),
+  currentNode: text("current_node"),
 });
 
 // Tool Models
@@ -66,17 +85,32 @@ export const insertAgentSchema = createInsertSchema(agents).omit({
   id: true,
   createdAt: true,
   lastRun: true,
+  runCount: true,
+  workflowId: true,
 });
 
 export const insertLogSchema = createInsertSchema(logs).omit({
   id: true,
   timestamp: true,
+}).extend({
+  details: z.record(z.any()).optional(),
+  executionId: z.string().optional(),
+  workflowId: z.number().optional(),
 });
 
 export const insertWorkflowSchema = createInsertSchema(workflows).omit({
   id: true,
   createdAt: true,
   lastRun: true,
+  executionCount: true,
+});
+
+export const insertExecutionSchema = createInsertSchema(executions).omit({
+  id: true,
+  startTime: true,
+  endTime: true,
+  results: true,
+  currentNode: true,
 });
 
 export const insertToolSchema = createInsertSchema(tools).omit({
@@ -90,6 +124,8 @@ export type InsertLog = z.infer<typeof insertLogSchema>;
 export type Log = typeof logs.$inferSelect;
 export type InsertWorkflow = z.infer<typeof insertWorkflowSchema>;
 export type Workflow = typeof workflows.$inferSelect;
+export type InsertExecution = z.infer<typeof insertExecutionSchema>;
+export type Execution = typeof executions.$inferSelect;
 export type InsertTool = z.infer<typeof insertToolSchema>;
 export type Tool = typeof tools.$inferSelect;
 

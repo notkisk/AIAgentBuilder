@@ -14,6 +14,9 @@ import {
   tools,
   type Tool,
   type InsertTool,
+  executions,
+  type Execution,
+  type InsertExecution,
   type WorkflowNodes
 } from "@shared/schema";
 
@@ -31,9 +34,10 @@ export interface IStorage {
   createAgent(agent: InsertAgent): Promise<Agent>;
   updateAgent(id: number, updates: Partial<InsertAgent>): Promise<Agent | undefined>;
   deleteAgent(id: number): Promise<boolean>;
+  linkAgentWithWorkflow(agentId: number, workflowId: number): Promise<Agent | undefined>;
   
   // Log methods
-  getLogs(agentId?: number): Promise<Log[]>;
+  getLogs(agentId?: number, workflowId?: number, executionId?: string): Promise<Log[]>;
   createLog(log: InsertLog): Promise<Log>;
   
   // Workflow methods
@@ -42,6 +46,13 @@ export interface IStorage {
   createWorkflow(workflow: InsertWorkflow): Promise<Workflow>;
   updateWorkflow(id: number, updates: Partial<InsertWorkflow>): Promise<Workflow | undefined>;
   deleteWorkflow(id: number): Promise<boolean>;
+  
+  // Execution methods
+  getExecutions(workflowId?: number, agentId?: number): Promise<Execution[]>;
+  getExecution(executionId: string): Promise<Execution | undefined>;
+  createExecution(execution: InsertExecution): Promise<Execution>;
+  updateExecution(executionId: string, updates: Partial<Execution>): Promise<Execution | undefined>;
+  completeExecution(executionId: string, success: boolean, results?: any): Promise<Execution | undefined>;
   
   // Tool methods
   getTools(): Promise<Tool[]>;
@@ -58,11 +69,13 @@ export class MemStorage implements IStorage {
   private logStore: Map<number, Log>;
   private workflowStore: Map<number, Workflow>;
   private toolStore: Map<number, Tool>;
+  private executionStore: Map<string, Execution>;
   userCurrentId: number;
   agentCurrentId: number;
   logCurrentId: number;
   workflowCurrentId: number;
   toolCurrentId: number;
+  executionCurrentId: number;
 
   constructor() {
     this.users = new Map();
@@ -70,11 +83,13 @@ export class MemStorage implements IStorage {
     this.logStore = new Map();
     this.workflowStore = new Map();
     this.toolStore = new Map();
+    this.executionStore = new Map();
     this.userCurrentId = 1;
     this.agentCurrentId = 1;
     this.logCurrentId = 1;
     this.workflowCurrentId = 1;
     this.toolCurrentId = 1;
+    this.executionCurrentId = 1;
     
     // Add some example agents
     this.createAgent({
@@ -146,7 +161,7 @@ export class MemStorage implements IStorage {
     this.initializeTools();
     
     // Add example workflow
-    this.createWorkflow({
+    const workflow = this.createWorkflow({
       name: "Email to Slack Summary",
       description: "Summarizes important emails and sends them to Slack",
       prompt: "When I receive an email from my boss, summarize it and send it to Slack.",
@@ -176,6 +191,9 @@ export class MemStorage implements IStorage {
       },
       status: "active"
     });
+    
+    // Link first agent with the workflow
+    this.linkAgentWithWorkflow(1, workflow.id);
   }
   
   private initializeTools() {
@@ -544,7 +562,9 @@ export class MemStorage implements IStorage {
       id, 
       createdAt: now,
       status: insertAgent.status || "inactive",
-      lastRun: insertAgent.status === "active" ? now : null
+      lastRun: insertAgent.status === "active" ? now : null,
+      workflowId: null,
+      runCount: 0
     };
     this.agentStore.set(id, agent);
     return agent;
@@ -557,8 +577,8 @@ export class MemStorage implements IStorage {
     const updatedAgent: Agent = {
       ...agent,
       ...updates,
-      // If status is changing to active, update lastRun
-      lastRun: updates.status === "active" ? new Date() : agent.lastRun,
+      // If status is changing to active, update the lastRun timestamp
+      lastRun: updates.status === "active" && agent.status !== "active" ? new Date() : agent.lastRun
     };
     
     this.agentStore.set(id, updatedAgent);
@@ -569,24 +589,51 @@ export class MemStorage implements IStorage {
     return this.agentStore.delete(id);
   }
   
+  async linkAgentWithWorkflow(agentId: number, workflowId: number): Promise<Agent | undefined> {
+    const agent = this.agentStore.get(agentId);
+    const workflow = this.workflowStore.get(workflowId);
+    
+    if (!agent || !workflow) return undefined;
+    
+    const updatedAgent: Agent = {
+      ...agent,
+      workflowId
+    };
+    
+    this.agentStore.set(agentId, updatedAgent);
+    return updatedAgent;
+  }
+  
   // Log methods
-  async getLogs(agentId?: number): Promise<Log[]> {
+  async getLogs(agentId?: number, workflowId?: number, executionId?: string): Promise<Log[]> {
     const logs = Array.from(this.logStore.values());
+    let filtered = logs;
     
     if (agentId) {
-      return logs.filter(log => log.agentId === agentId);
+      filtered = filtered.filter(log => log.agentId === agentId);
     }
     
-    return logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    if (workflowId) {
+      filtered = filtered.filter(log => log.workflowId === workflowId);
+    }
+    
+    if (executionId) {
+      filtered = filtered.filter(log => log.executionId === executionId);
+    }
+    
+    return filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
   
   async createLog(insertLog: InsertLog): Promise<Log> {
     const id = this.logCurrentId++;
-    const now = new Date();
+    const timestamp = new Date();
     const log: Log = { 
       ...insertLog, 
       id, 
-      timestamp: now
+      timestamp,
+      workflowId: null,
+      executionId: null,
+      details: {}
     };
     this.logStore.set(id, log);
     return log;
@@ -609,7 +656,8 @@ export class MemStorage implements IStorage {
       id,
       createdAt: now,
       status: insertWorkflow.status || "inactive",
-      lastRun: insertWorkflow.status === "active" ? now : null
+      lastRun: insertWorkflow.status === "active" ? now : null,
+      executionCount: 0
     };
     this.workflowStore.set(id, workflow);
     return workflow;
@@ -622,8 +670,8 @@ export class MemStorage implements IStorage {
     const updatedWorkflow: Workflow = {
       ...workflow,
       ...updates,
-      // If status is changing to active, update lastRun
-      lastRun: updates.status === "active" ? new Date() : workflow.lastRun,
+      // If status is changing to active, update the lastRun timestamp
+      lastRun: updates.status === "active" && workflow.status !== "active" ? new Date() : workflow.lastRun
     };
     
     this.workflowStore.set(id, updatedWorkflow);
@@ -632,6 +680,148 @@ export class MemStorage implements IStorage {
   
   async deleteWorkflow(id: number): Promise<boolean> {
     return this.workflowStore.delete(id);
+  }
+  
+  // Execution methods
+  async getExecutions(workflowId?: number, agentId?: number): Promise<Execution[]> {
+    let executions = Array.from(this.executionStore.values());
+    
+    if (workflowId) {
+      executions = executions.filter(execution => execution.workflowId === workflowId);
+    }
+    
+    if (agentId) {
+      executions = executions.filter(execution => execution.agentId === agentId);
+    }
+    
+    return executions.sort((a, b) => b.startTime.getTime() - a.startTime.getTime());
+  }
+  
+  async getExecution(executionId: string): Promise<Execution | undefined> {
+    return this.executionStore.get(executionId);
+  }
+  
+  async createExecution(insertExecution: InsertExecution): Promise<Execution> {
+    const id = this.executionCurrentId++;
+    const startTime = new Date();
+    const executionId = `exec_${Date.now()}_${id}`;
+    
+    const execution: Execution = {
+      ...insertExecution,
+      id,
+      executionId,
+      startTime,
+      endTime: null,
+      status: "pending",
+      results: {},
+      currentNode: null
+    };
+    
+    this.executionStore.set(executionId, execution);
+    
+    // Add a log entry for this execution
+    this.createLog({
+      agentId: insertExecution.agentId,
+      level: "info",
+      message: `Started execution ${executionId}`,
+      workflowId: insertExecution.workflowId,
+      executionId,
+      details: { status: "pending" }
+    });
+    
+    // Update workflow execution count
+    const workflow = await this.getWorkflow(insertExecution.workflowId);
+    if (workflow) {
+      const updatedWorkflow: Workflow = {
+        ...workflow,
+        executionCount: (workflow.executionCount || 0) + 1,
+        lastRun: startTime
+      };
+      this.workflowStore.set(workflow.id, updatedWorkflow);
+    }
+    
+    // Update agent run count
+    const agent = await this.getAgent(insertExecution.agentId);
+    if (agent) {
+      const updatedAgent: Agent = {
+        ...agent,
+        runCount: (agent.runCount || 0) + 1,
+        lastRun: startTime,
+        status: "running"
+      };
+      this.agentStore.set(agent.id, updatedAgent);
+    }
+    
+    return execution;
+  }
+  
+  async updateExecution(executionId: string, updates: Partial<Execution>): Promise<Execution | undefined> {
+    const execution = this.executionStore.get(executionId);
+    if (!execution) return undefined;
+    
+    const updatedExecution: Execution = {
+      ...execution,
+      ...updates,
+      // If there's a new node being processed
+      currentNode: updates.currentNode || execution.currentNode
+    };
+    
+    this.executionStore.set(executionId, updatedExecution);
+    
+    // Log node transition if currentNode changed
+    if (updates.currentNode && updates.currentNode !== execution.currentNode) {
+      this.createLog({
+        agentId: execution.agentId,
+        level: "info",
+        message: `Moving to node ${updates.currentNode}`,
+        workflowId: execution.workflowId,
+        executionId,
+        details: { currentNode: updates.currentNode }
+      });
+    }
+    
+    return updatedExecution;
+  }
+  
+  async completeExecution(executionId: string, success: boolean, results: any = {}): Promise<Execution | undefined> {
+    const execution = this.executionStore.get(executionId);
+    if (!execution) return undefined;
+    
+    const endTime = new Date();
+    const status = success ? "completed" : "failed";
+    
+    const updatedExecution: Execution = {
+      ...execution,
+      status,
+      endTime,
+      results: results || {},
+      currentNode: null
+    };
+    
+    this.executionStore.set(executionId, updatedExecution);
+    
+    // Log completion
+    this.createLog({
+      agentId: execution.agentId,
+      level: success ? "info" : "error",
+      message: `Execution ${status}: ${executionId}`,
+      workflowId: execution.workflowId,
+      executionId,
+      details: { results, status }
+    });
+    
+    // Update agent status
+    const agent = await this.getAgent(execution.agentId);
+    if (agent) {
+      const updatedAgent: Agent = {
+        ...agent,
+        status: agent.status === "running" ? "active" : agent.status,
+        lastRun: endTime
+      };
+      this.agentStore.set(agent.id, updatedAgent);
+    }
+    
+    return updatedExecution;
   }
   
   // Tool methods
@@ -645,7 +835,7 @@ export class MemStorage implements IStorage {
   
   async getToolByName(name: string): Promise<Tool | undefined> {
     return Array.from(this.toolStore.values()).find(
-      (tool) => tool.name === name
+      (tool) => tool.name === name,
     );
   }
   
@@ -655,9 +845,7 @@ export class MemStorage implements IStorage {
     const tool: Tool = {
       ...insertTool,
       id,
-      createdAt: now,
-      auth: insertTool.auth || {},
-      enabled: insertTool.enabled !== undefined ? insertTool.enabled : true
+      createdAt: now
     };
     this.toolStore.set(id, tool);
     return tool;

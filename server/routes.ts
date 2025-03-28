@@ -5,7 +5,8 @@ import {
   insertAgentSchema, 
   insertLogSchema, 
   insertWorkflowSchema, 
-  insertToolSchema, 
+  insertToolSchema,
+  insertExecutionSchema,
   WorkflowNodesSchema 
 } from "@shared/schema";
 import OpenAI from "openai";
@@ -91,7 +92,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/logs", async (req, res) => {
     try {
       const agentId = req.query.agentId ? parseInt(req.query.agentId as string) : undefined;
-      const logs = await storage.getLogs(agentId);
+      const workflowId = req.query.workflowId ? parseInt(req.query.workflowId as string) : undefined;
+      const executionId = req.query.executionId ? String(req.query.executionId) : undefined;
+      const logs = await storage.getLogs(agentId, workflowId, executionId);
       res.json(logs);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch logs" });
@@ -198,6 +201,234 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete workflow" });
     }
   });
+
+  // Executions API
+  app.get("/api/executions", async (req, res) => {
+    try {
+      const workflowId = req.query.workflowId ? parseInt(req.query.workflowId as string) : undefined;
+      const agentId = req.query.agentId ? parseInt(req.query.agentId as string) : undefined;
+      const executions = await storage.getExecutions(workflowId, agentId);
+      res.json(executions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch executions" });
+    }
+  });
+
+  app.get("/api/executions/:id", async (req, res) => {
+    try {
+      const executionId = req.params.id;
+      const execution = await storage.getExecution(executionId);
+      
+      if (!execution) {
+        return res.status(404).json({ message: "Execution not found" });
+      }
+      
+      res.json(execution);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch execution" });
+    }
+  });
+
+  app.post("/api/executions", async (req, res) => {
+    try {
+      const parsedData = insertExecutionSchema.safeParse(req.body);
+      
+      if (!parsedData.success) {
+        return res.status(400).json({ message: "Invalid execution data", errors: parsedData.error.format() });
+      }
+      
+      const execution = await storage.createExecution(parsedData.data);
+      res.status(201).json(execution);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create execution" });
+    }
+  });
+
+  app.patch("/api/executions/:id", async (req, res) => {
+    try {
+      const executionId = req.params.id;
+      const updates = req.body;
+      
+      const execution = await storage.updateExecution(executionId, updates);
+      
+      if (!execution) {
+        return res.status(404).json({ message: "Execution not found" });
+      }
+      
+      res.json(execution);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update execution" });
+    }
+  });
+
+  app.post("/api/executions/:id/complete", async (req, res) => {
+    try {
+      const executionId = req.params.id;
+      const { success, results } = req.body;
+      
+      if (typeof success !== 'boolean') {
+        return res.status(400).json({ message: "Success parameter is required and must be a boolean" });
+      }
+      
+      const execution = await storage.completeExecution(executionId, success, results);
+      
+      if (!execution) {
+        return res.status(404).json({ message: "Execution not found" });
+      }
+      
+      res.json(execution);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to complete execution" });
+    }
+  });
+
+  // Agent-Workflow linking endpoint
+  app.post("/api/agents/:agentId/link/:workflowId", async (req, res) => {
+    try {
+      const agentId = parseInt(req.params.agentId);
+      const workflowId = parseInt(req.params.workflowId);
+      
+      const agent = await storage.linkAgentWithWorkflow(agentId, workflowId);
+      
+      if (!agent) {
+        return res.status(404).json({ message: "Agent or workflow not found" });
+      }
+      
+      res.json(agent);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to link agent with workflow" });
+    }
+  });
+
+  // Agent execution endpoint
+  app.post("/api/agents/:id/execute", async (req, res) => {
+    try {
+      const agentId = parseInt(req.params.id);
+      const agent = await storage.getAgent(agentId);
+      
+      if (!agent) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      
+      if (!agent.workflowId) {
+        return res.status(400).json({ message: "Agent has no associated workflow" });
+      }
+      
+      const workflow = await storage.getWorkflow(agent.workflowId);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Associated workflow not found" });
+      }
+      
+      // Create a new execution
+      const execution = await storage.createExecution({
+        workflowId: workflow.id,
+        agentId: agent.id,
+        executionId: `exec_${Date.now()}_${agent.id}_${workflow.id}`,
+        status: "pending"
+      });
+      
+      // Update agent status to running
+      await storage.updateAgent(agent.id, { status: "running" });
+      
+      // Start processing the workflow in the background (in a real app, this would be a worker/job)
+      setTimeout(() => {
+        simulateWorkflowExecution(execution.executionId, workflow, agent);
+      }, 100);
+      
+      res.status(202).json({ 
+        message: "Execution started", 
+        execution,
+        agent
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to execute agent" });
+    }
+  });
+  
+  // Function to simulate workflow execution (for demo purposes only)
+  async function simulateWorkflowExecution(executionId: string, workflow: any, agent: any) {
+    try {
+      // Start execution
+      await storage.createLog({
+        agentId: agent.id,
+        level: "info",
+        message: `Starting execution of workflow '${workflow.name}'`,
+        workflowId: workflow.id,
+        executionId
+      });
+      
+      const nodes = workflow.nodes.nodes;
+      
+      // Process each node sequentially (simple simulation)
+      for (const node of nodes) {
+        // Update execution with current node
+        await storage.updateExecution(executionId, { 
+          status: "running",
+          currentNode: node.id 
+        });
+        
+        // Log node execution
+        await storage.createLog({
+          agentId: agent.id,
+          level: "info",
+          message: `Executing node ${node.id}: ${node.tool}.${node.function}`,
+          workflowId: workflow.id,
+          executionId,
+          details: { node }
+        });
+        
+        // Simulate processing time (1-3 seconds per node)
+        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      }
+      
+      // Mark execution as complete
+      await storage.completeExecution(executionId, true, { 
+        result: "Workflow completed successfully",
+        executionTime: `${nodes.length + Math.random() * 2}s`
+      });
+      
+      // Update agent status
+      await storage.updateAgent(agent.id, { 
+        status: "active",
+        lastRun: new Date()
+      });
+      
+      // Add final log
+      await storage.createLog({
+        agentId: agent.id,
+        level: "info",
+        message: `Workflow execution completed: ${workflow.name}`,
+        workflowId: workflow.id,
+        executionId,
+        details: { status: "success" }
+      });
+    } catch (error) {
+      console.error("Error in workflow execution simulation:", error);
+      
+      // Mark execution as failed
+      await storage.completeExecution(executionId, false, { 
+        error: "Execution failed",
+        reason: error.message || "Unknown error"
+      });
+      
+      // Update agent status
+      await storage.updateAgent(agent.id, { 
+        status: "error",
+        lastRun: new Date()
+      });
+      
+      // Add error log
+      await storage.createLog({
+        agentId: agent.id,
+        level: "error",
+        message: `Workflow execution failed: ${error.message || "Unknown error"}`,
+        workflowId: workflow.id,
+        executionId,
+        details: { error: error.message || "Unknown error" }
+      });
+    }
+  }
 
   // Tools API
   app.get("/api/tools", async (req, res) => {
