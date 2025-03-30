@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import ChatInterface from "@/components/chat/ChatInterface";
 import WorkflowEditor from "@/components/workflow/WorkflowEditor";
-import IntegratedWorkflowBuilder from "@/components/workflow/IntegratedWorkflowBuilder";
+import { IntegratedWorkflowBuilder } from "@/components/workflow/IntegratedWorkflowBuilder";
 import { isAIProviderConfigured } from "@/lib/ai-service";
 import { WorkflowNode, WorkflowNodes } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";

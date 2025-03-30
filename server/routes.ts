@@ -9,6 +9,7 @@ import {
   insertExecutionSchema,
   WorkflowNodesSchema 
 } from "@shared/schema";
+import { createModifiedWorkflow, createNewWorkflow } from "./workflowService";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -184,6 +185,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(workflow);
     } catch (error) {
       res.status(500).json({ message: "Failed to update workflow" });
+    }
+  });
+  
+  // Modify workflow with natural language
+  app.post("/api/workflows/:id/modify", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ message: "Invalid prompt. A string prompt is required." });
+      }
+      
+      const workflow = await storage.getWorkflow(id);
+      
+      if (!workflow) {
+        return res.status(404).json({ message: "Workflow not found" });
+      }
+      
+      // Import the workflow service
+      const { createModifiedWorkflow } = require('./workflowService');
+      
+      // Parse the workflow nodes
+      let nodes = [];
+      try {
+        // Handle different node structures
+        if (workflow.nodes && typeof workflow.nodes === 'object') {
+          if (Array.isArray(workflow.nodes)) {
+            nodes = workflow.nodes;
+          } else if (workflow.nodes.nodes && Array.isArray(workflow.nodes.nodes)) {
+            nodes = workflow.nodes.nodes;
+          }
+        }
+      } catch (parseError) {
+        console.error("Error parsing workflow nodes:", parseError);
+        return res.status(400).json({ message: "Invalid workflow nodes" });
+      }
+      
+      // Modify the workflow with the natural language prompt
+      const modifiedWorkflow = createModifiedWorkflow(prompt, nodes);
+      
+      // Update the workflow in storage
+      const updatedWorkflow = await storage.updateWorkflow(id, {
+        nodes: modifiedWorkflow.nodes,
+        description: `${workflow.description} (Modified: ${new Date().toISOString()})`
+      });
+      
+      // Return the modified workflow with the message
+      res.json({
+        workflow: updatedWorkflow,
+        message: modifiedWorkflow.message
+      });
+    } catch (error) {
+      console.error("Error modifying workflow:", error);
+      res.status(500).json({ message: "Failed to modify workflow" });
     }
   });
 
@@ -430,6 +486,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  // Chat-based workflow generation API
+  app.post("/api/workflows/generate", async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ message: "Invalid prompt. A string prompt is required." });
+      }
+      
+      // Generate a new workflow using the service
+      const workflowResponse = createNewWorkflow(prompt);
+      
+      res.json(workflowResponse);
+    } catch (error) {
+      console.error("Error generating workflow:", error);
+      res.status(500).json({ message: "Failed to generate workflow" });
+    }
+  });
+  
+  // Chat-based workflow modification API
+  app.post("/api/workflows/modify", async (req, res) => {
+    try {
+      const { prompt, nodes, workflowId } = req.body;
+      
+      if (!prompt || typeof prompt !== "string") {
+        return res.status(400).json({ message: "Invalid prompt. A string prompt is required." });
+      }
+      
+      if (!nodes || !Array.isArray(nodes)) {
+        return res.status(400).json({ message: "Invalid nodes. An array of workflow nodes is required." });
+      }
+      
+      // Modify the existing workflow with the service
+      const modifiedWorkflow = createModifiedWorkflow(prompt, nodes);
+      
+      // If a workflowId was provided, update the workflow in storage
+      if (workflowId) {
+        const updatedWorkflow = await storage.updateWorkflow(workflowId, {
+          nodes: modifiedWorkflow.nodes,
+          description: `${modifiedWorkflow.description} (Modified: ${new Date().toISOString()})`
+        });
+        
+        if (!updatedWorkflow) {
+          return res.status(404).json({ message: "Workflow not found" });
+        }
+      }
+      
+      res.json(modifiedWorkflow);
+    } catch (error) {
+      console.error("Error modifying workflow:", error);
+      res.status(500).json({ message: "Failed to modify workflow" });
+    }
+  });
+
   // Tools API
   app.get("/api/tools", async (req, res) => {
     try {
@@ -520,13 +630,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI workflow generator API
   app.post("/api/generate-workflow", async (req, res) => {
     try {
-      const { prompt } = req.body;
+      const { prompt, currentWorkflow } = req.body;
       
       if (!prompt || typeof prompt !== "string") {
         return res.status(400).json({ message: "Invalid prompt. A string prompt is required." });
       }
       
+      // Import the workflow service functions
+      const { createModifiedWorkflow, createNewWorkflow } = require('./workflowService');
+      
       let generatedWorkflow;
+      const isModifying = currentWorkflow && currentWorkflow.nodes && Array.isArray(currentWorkflow.nodes) && currentWorkflow.nodes.length > 0;
       
       // Check if we have API keys for OpenAI or Anthropic
       if (process.env.OPENAI_API_KEY) {
@@ -603,8 +717,12 @@ Available tools and functions:
           };
         } catch (aiError) {
           console.error("OpenAI workflow generation error:", aiError);
-          // Fall back to default workflow if AI generation fails
-          generatedWorkflow = createFallbackWorkflow(prompt);
+          // Fall back to our workflow service if AI generation fails
+          if (isModifying) {
+            generatedWorkflow = createModifiedWorkflow(prompt, currentWorkflow.nodes);
+          } else {
+            generatedWorkflow = createNewWorkflow(prompt);
+          }
         }
       } else if (process.env.ANTHROPIC_API_KEY) {
         try {
@@ -688,12 +806,20 @@ Available tools and functions:
           };
         } catch (aiError) {
           console.error("Anthropic workflow generation error:", aiError);
-          // Fall back to default workflow if AI generation fails
-          generatedWorkflow = createFallbackWorkflow(prompt);
+          // Fall back to our workflow service if AI generation fails
+          if (isModifying) {
+            generatedWorkflow = createModifiedWorkflow(prompt, currentWorkflow.nodes);
+          } else {
+            generatedWorkflow = createNewWorkflow(prompt);
+          }
         }
       } else {
-        // No AI provider available, use fallback
-        generatedWorkflow = createFallbackWorkflow(prompt);
+        // No AI provider available, use the new workflow service
+        if (isModifying) {
+          generatedWorkflow = createModifiedWorkflow(prompt, currentWorkflow.nodes);
+        } else {
+          generatedWorkflow = createNewWorkflow(prompt);
+        }
       }
       
       res.json(generatedWorkflow);

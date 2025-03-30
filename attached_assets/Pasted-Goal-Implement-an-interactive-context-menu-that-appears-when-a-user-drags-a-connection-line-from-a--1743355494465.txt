@@ -1,0 +1,131 @@
+Goal: Implement an interactive context menu that appears when a user drags a connection line from a node's output or input handle in the React Flow canvas. This menu should allow the user to quickly search for, select, and automatically create/connect a new node.
+
+Context:
+The application uses React and React Flow for the visual workflow builder. Currently, users likely add nodes via a separate button and then manually connect them. This feature aims to streamline the process by allowing node creation during the connection drag operation.
+
+Detailed UI/UX Behavior:
+
+Trigger: The interaction starts when the user clicks and holds on an output or input handle (port) of an existing node and begins dragging a connection line into empty space on the canvas.
+
+Context Menu Appearance:
+
+As the user drags, a context menu should appear near the mouse cursor's current position (the end of the dragged line).
+
+This menu should initially display a list of predefined Node Categories (e.g., "AI", "Logic", "Input/Output", "Data Transformation").
+
+Include a Search Input Field at the top of the menu.
+
+Category Navigation (Nested Menu):
+
+When the user hovers over or clicks a Category name in the initial menu:
+
+A secondary context menu (or an expanded section within the main menu) should appear adjacent to the category.
+
+This secondary menu lists the specific Nodes available within that selected category.
+
+Moving the cursor away from the category/secondary menu should potentially close the secondary menu, returning focus to the categories or closing nested menus gracefully.
+
+Search Functionality:
+
+As the user types into the Search Input Field:
+
+The list displayed within the context menu should dynamically update to show only nodes (across all categories) whose names or descriptions match the search query.
+
+The category structure might be temporarily flattened or hidden during search results display, showing only the matching nodes.
+
+Node Selection:
+
+The user can click on a specific Node Name either from browsing the categories or from the search results list.
+
+Action on Selection:
+
+Upon clicking a node name in the context menu:
+
+The context menu closes immediately.
+
+A new node of the selected type is programmatically created.
+
+This new node is automatically positioned on the canvas near the point where the user released the drag/clicked the menu item.
+
+An edge (connection line) is automatically created, connecting the original source handle (where the drag started) to the appropriate default input/output handle of the newly created node.
+
+Cancellation:
+
+If the user releases the mouse button without clicking on a node name in the menu (e.g., clicks outside the menu, drags back to a valid handle, or perhaps presses the Esc key):
+
+The context menu closes.
+
+No new node is created.
+
+The connection drag operation is cancelled (or completed normally if dragged to a valid handle).
+
+Implementation Requirements:
+
+Data Structure: Define a structured way to represent the available nodes, including their names, types/IDs, categories, and default input/output handles (e.g., an array of objects or a nested object).
+
+// Example Structure
+const availableNodes = [
+  { id: 'chatgpt', name: 'Summarize Text', category: 'AI', defaultInput: 'text_in', defaultOutput: 'summary_out' },
+  { id: 'gmail', name: 'Send Email', category: 'Input/Output', defaultInput: 'email_data', defaultOutput: null },
+  // ... other nodes
+];
+Use code with caution.
+JavaScript
+React Flow Event Handling:
+
+Utilize React Flow's onConnectStart prop to detect when a connection drag begins. Store the nodeId and handleId of the source.
+
+Utilize React Flow's onConnectEnd prop. This event fires when the drag stops, regardless of whether a connection was made. Use this to detect if the drag ended in empty space (signifying potential menu interaction or cancellation).
+
+Potentially use mouse move events during the drag (onPaneMouseMove or window listeners) to update the menu's position.
+
+Context Menu Component:
+
+Create a reusable React component for the context menu itself.
+
+It should accept the list of available nodes/categories and the current search query as props.
+
+Manage its own internal state for hover/active categories and search filtering.
+
+Position it absolutely based on coordinates passed as props (derived from mouse position during drag).
+
+Render categories, nested node lists, and search results dynamically.
+
+Include the search input field.
+
+Trigger a callback function (onNodeSelect) when a node is clicked, passing the selected node's type/ID.
+
+State Management:
+
+Maintain state in the main builder component to track:
+
+Whether the context menu should be visible (isMenuVisible).
+
+The menu's position (menuPosition: { x, y }).
+
+The source handle information (connectStartParams: { nodeId, handleId, handleType }).
+
+The current search term entered in the menu (searchTerm).
+
+Node Creation & Connection Logic:
+
+Implement the function triggered by onNodeSelect from the context menu.
+
+This function should:
+
+Generate a unique ID for the new node.
+
+Calculate a suitable position for the new node (e.g., offset from the menuPosition).
+
+Use React Flow's addNodes function to add the new node data.
+
+Use React Flow's addEdges function to create the connection between the connectStartParams handle and the new node's default handle.
+
+Reset state to hide the menu (setIsMenuVisible(false)).
+
+Styling: Style the context menu (background, borders, text, hover effects, search input) to fit the application's theme. Ensure nested menus are visually clear.
+
+Technology Stack: React, React Flow, CSS/TailwindCSS.
+
+Deliverable:
+Provide React component code for the context menu, state management logic within the main builder component, examples of React Flow event handlers (onConnectStart, onConnectEnd), the node/edge creation logic, and the required data structure for available nodes. Explain how menu positioning and cancellation are handled.

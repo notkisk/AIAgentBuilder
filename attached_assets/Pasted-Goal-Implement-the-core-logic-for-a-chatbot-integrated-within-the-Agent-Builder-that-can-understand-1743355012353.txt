@@ -1,0 +1,80 @@
+Goal: Implement the core logic for a chatbot integrated within the Agent Builder that can understand user prompts to modify a visual workflow. The chatbot uses the workflow's JSON representation as its primary knowledge base for the current editing session.
+
+Context:
+The application features a combined Chat UI and Visual Workflow Builder (e.g., using React Flow). Users interact with the chat to describe changes they want to make to the workflow (add node, connect nodes, modify parameters, delete node). The workflow itself is fundamentally represented as a JSON object containing nodes and edges.
+
+Core Interaction Flow:
+
+Initialization: When the Agent Builder loads (or a specific agent/workflow is opened), the current workflow's JSON representation is loaded into the frontend's state. This JSON serves as the initial "knowledge base" for the chatbot regarding the current workflow structure.
+
+User Prompt: The user types a command into the chat input (e.g., "Add a Gmail node after the summarize text node", "Change the URL in the fetchPage node to 'google.com'", "Connect the output of fetchPage to the text input of summarizeText").
+
+Frontend Sends Request: The frontend sends an API request to a dedicated backend endpoint. This request must include:
+
+The user's raw text prompt.
+
+The current workflow state as a JSON object (read from the frontend's state).
+
+Backend Processing (AI/LLM):
+
+The backend receives the prompt and the current workflow JSON.
+
+An AI/LLM (or a sophisticated rule-based system) analyzes the prompt in the context of the provided JSON.
+
+It determines the necessary modifications to the JSON structure (adding/removing nodes, adding/removing edges, updating node properties).
+
+It generates the new, modified workflow JSON reflecting the requested changes.
+
+It also generates a natural language text response for the user (e.g., "OK, I've added the Gmail node.", "Which output from fetchPage should connect to summarizeText?", "Sorry, I couldn't find a node named 'fetchPage'.")
+
+Backend Sends Response: The backend sends a response back to the frontend containing:
+
+The modified workflow JSON object.
+
+The natural language text response string.
+
+Frontend Updates:
+
+The frontend receives the response.
+
+It updates its state with the new workflow JSON. This state update triggers the Visual Workflow Builder (React Flow) to re-render, showing the changes visually.
+
+It displays the natural language text response from the backend in the chat history.
+
+(Assumption): A backend service capable of performing step 4 (AI/LLM processing of prompt + JSON -> new JSON + text response) exists or will be developed separately. This prompt focuses on the frontend's role in facilitating this interaction.
+
+Frontend Implementation Requirements:
+
+State Management:
+
+Maintain the current workflow's state as a JSON object within the React application's state (e.g., using useState or useReducer). This state must be the single source of truth passed to the React Flow component.
+
+API Communication:
+
+Implement an asynchronous function (e.g., using fetch or axios) to send the user prompt and the current workflow JSON state to the designated backend endpoint (POST request recommended).
+
+Handle the response from the backend, expecting both the new JSON and the text response.
+
+State Update:
+
+Upon receiving a successful response, update the React state holding the workflow JSON with the new JSON received from the backend. Ensure this update correctly triggers a re-render of the React Flow canvas.
+
+Append both the user's prompt and the AI's text response to the chat history display.
+
+Error Handling:
+
+Handle potential API errors gracefully (e.g., network issues, backend errors). Display informative messages to the user in the chat if the request fails or if the backend indicates the prompt couldn't be processed. Do not update the workflow JSON state if the backend indicates an error or no change was made.
+
+Technology Stack: React, State Management (React Hooks, Redux, Zustand, etc.), Fetch API / Axios.
+
+Deliverable:
+Provide React code snippets demonstrating:
+
+How the workflow JSON is stored in state and passed to React Flow.
+
+The function responsible for sending the prompt and current JSON to the backend API.
+
+The logic for handling the backend response, updating the workflow JSON state, and updating the chat history.
+
+Basic error handling for the API call.
+Define the expected structure of the JSON sent to and received from the backend (even if just descriptively).
