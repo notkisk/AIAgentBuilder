@@ -241,17 +241,30 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
 
         {/* Edit button - only for editable workflows */}
         {onConfigureNode && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="mt-2 w-full text-xs"
-            onClick={(e) => {
-              e.stopPropagation();
-              onConfigureNode(id);
-            }}
-          >
-            Edit Configuration
-          </Button>
+          <>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="mt-2 w-full text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onConfigureNode(id);
+              }}
+            >
+              Edit Configuration
+            </Button>
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              className="mt-2 w-full text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteNode(id);
+              }}
+            >
+              Delete Node
+            </Button>
+          </>
         )}
       </div>
     </div>
