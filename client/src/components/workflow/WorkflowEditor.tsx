@@ -184,19 +184,17 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
         <div className="tooltip">Output Connection</div>
       </div>
 
-      {/* Delete button - only visible when not read-only */}
-      {onDeleteNode && (
-        <button 
-          className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteNode(id);
-          }}
-          title="Remove Node"
-        >
-          <X size={12} />
-        </button>
-      )}
+      {/* Delete button - always visible */}
+      <button 
+        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDeleteNode(id);
+        }}
+        title="Remove Node"
+      >
+        <X size={12} />
+      </button>
 
       <div className="flex flex-col space-y-1">
         <div className="flex items-center mb-2">
