@@ -10,7 +10,7 @@
   * {
     @apply border-border;
   }
-  
+
   html {
     scroll-behavior: smooth;
   }
@@ -20,7 +20,7 @@
     background-color: #f5f5f7;
     background-image: none;
   }
-  
+
   .dark body {
     background-color: #1e1e1e;
   }
@@ -33,25 +33,46 @@
            border border-gray-200/50 dark:border-gray-700/50 
            shadow-sm;
   }
-  
+
   .glass-card {
     @apply glass rounded-lg transition-all duration-300
            hover:shadow-md;
   }
-  
+
   .glass-button {
     @apply bg-white dark:bg-gray-800 rounded-md
            border border-gray-200 dark:border-gray-700
            shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700/80 
            transition-all duration-150;
   }
-  
+
+  /* Flow styling */
+  .react-flow {
+    @apply bg-background text-foreground;
+  }
+
+  .react-flow__node {
+    @apply bg-card text-card-foreground border-border;
+  }
+
+  .react-flow__controls {
+    @apply bg-background border-border;
+  }
+
+  .react-flow__controls-button {
+    @apply border-border fill-foreground hover:bg-muted;
+  }
+
+  .react-flow__minimap {
+    @apply bg-background;
+  }
+
   /* ReactFlow Node Tooltips */
   .tooltip-container {
     position: relative;
     display: inline-block;
   }
-  
+
   .tooltip {
     visibility: hidden;
     position: absolute;
@@ -69,43 +90,43 @@
     left: 50%;
     transform: translateX(-50%);
   }
-  
+
   /* Show tooltip on hover */
   .tooltip-container:hover .tooltip {
     visibility: visible;
     opacity: 1;
   }
-  
+
   /* Position the tooltip */
   .tooltip-container:has(> .react-flow__handle-top) .tooltip {
     bottom: 135%;
   }
-  
+
   .tooltip-container:has(> .react-flow__handle-bottom) .tooltip {
     top: 135%;
   }
-  
+
   /* macOS sidebar style */
   .macos-sidebar {
     @apply bg-[#f2f2f7] dark:bg-[#1c1c1e] border-r border-gray-200 dark:border-gray-800;
   }
-  
+
   /* macOS window style */
   .macos-window {
     @apply rounded-lg overflow-hidden bg-white dark:bg-gray-900 
            shadow-md border border-gray-200 dark:border-gray-800;
   }
-  
+
   /* Gradient text */
   .gradient-text {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400;
   }
-  
+
   /* Animation utilities */
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
-  
+
   @keyframes float {
     0% {
       transform: translateY(0px);
@@ -117,25 +138,25 @@
       transform: translateY(0px);
     }
   }
-  
+
   /* macOS style scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
-  
+
   ::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
-  
+
   ::-webkit-scrollbar-thumb {
     @apply bg-gray-300/80 dark:bg-gray-600/80 rounded-full;
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-gray-400 dark:bg-gray-500;
   }
-  
+
   /* macOS toolbar style */
   .macos-toolbar {
     @apply flex items-center px-4 h-12 bg-white/90 dark:bg-gray-800/90 
