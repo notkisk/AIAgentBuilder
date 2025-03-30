@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -15,7 +15,9 @@ import ReactFlow, {
   useReactFlow,
   Connection,
   addEdge,
-  ConnectionLineType
+  ConnectionLineType,
+  OnConnectStartParams,
+  NodeChange
 } from 'reactflow';
 import { getToolColor } from '@/lib/agent-tools';
 import { 
@@ -395,7 +397,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   const InteractiveFlow = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialFlowNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlowEdges);
-    const { fitView, zoomIn, zoomOut } = useReactFlow();
+    const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
     const [nodeConfig, setNodeConfig] = useState<{
       tool: string;
@@ -406,6 +408,9 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     const [selectedTool, setSelectedTool] = useState<string>('');
     const [selectedFunction, setSelectedFunction] = useState<string>('');
     const [newNodeParams, setNewNodeParams] = useState<Record<string, string>>({});
+    const [connectingNodeId, setConnectingNodeId] = useState<string | null>(null);
+    const [connectingHandleType, setConnectingHandleType] = useState<'source' | 'target' | null>(null);
+    const [connectingPos, setConnectingPos] = useState({ x: 0, y: 0 });
     
     // Set up handlers for node configuration
     const handleConfigureNode = useCallback((nodeId: string) => {
@@ -462,7 +467,8 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         const workflowNodes = getWorkflowNodesFromFlow(nodes, edges);
         
         try {
-          onNodesChange(workflowNodes);
+          // Explicitly cast onNodesChange to accept our WorkflowNode[] type
+          (onNodesChange as (nodes: WorkflowNode[]) => void)(workflowNodes);
         } catch (err) {
           console.error('Error updating nodes:', err);
         }
@@ -517,6 +523,11 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         label: `${node.data.tool}:${node.data.function}`,
       }));
       
+      // Use the connecting position if available, otherwise use a random position
+      const position = connectingNodeId ? 
+        connectingPos : 
+        { x: Math.random() * 300, y: Math.random() * 300 };
+      
       // Add the new node
       const newNode: Node = {
         id: newId,
@@ -530,10 +541,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           onDeleteNode: handleDeleteNode,
           availableInputs,
         },
-        position: { 
-          x: Math.random() * 300, 
-          y: Math.random() * 300 
-        }
+        position
       };
       
       setNodes(nds => [...nds, newNode]);
@@ -543,6 +551,14 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       setSelectedFunction('');
       setNewNodeParams({});
       setShowAddNodeSheet(false);
+      
+      // If this node was created from dragging a connection, dispatch a custom event
+      if (connectingNodeId) {
+        // Dispatch custom event to notify that a node was created
+        document.dispatchEvent(new CustomEvent('nodeCreated', { 
+          detail: { nodeId: newId } 
+        }));
+      }
       
       // Update layout
       setTimeout(() => {
@@ -591,6 +607,104 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     const parametersForSelectedFunction = 
       functionsForSelectedTool.find(f => f.name === selectedFunction)?.parameters || {};
     
+    // Handle connection start event for drag-to-create functionality
+    const onConnectStart = useCallback(
+      (event: React.MouseEvent | React.TouchEvent, { nodeId, handleType }: OnConnectStartParams) => {
+        if (nodeId) {
+          setConnectingNodeId(nodeId);
+          setConnectingHandleType(handleType as 'source' | 'target');
+        }
+      },
+      []
+    );
+
+    // Type guard to check if this is a mouse event
+    const isMouseEvent = (event: MouseEvent | TouchEvent): event is MouseEvent => {
+      return 'clientX' in event && 'clientY' in event;
+    };
+
+    // Handle connection end event for drag-to-create functionality
+    const onConnectEnd = useCallback(
+      (event: MouseEvent | TouchEvent) => {
+        if (!connectingNodeId || !connectingHandleType || readOnly) return;
+
+        // Get the position where user dropped the connection
+        const reactFlowBounds = document.querySelector('.react-flow')?.getBoundingClientRect();
+        if (reactFlowBounds && screenToFlowPosition) {
+          // Handle both mouse and touch events to get coordinates
+          let clientX = 0;
+          let clientY = 0;
+          
+          if (isMouseEvent(event)) {
+            clientX = event.clientX;
+            clientY = event.clientY;
+          } else if (event.touches && event.touches.length > 0) {
+            clientX = event.touches[0].clientX;
+            clientY = event.touches[0].clientY;
+          }
+          
+          const dropPosition = screenToFlowPosition({
+            x: clientX - reactFlowBounds.left,
+            y: clientY - reactFlowBounds.top,
+          });
+          
+          setConnectingPos(dropPosition);
+          
+          // Check if we're not over another node
+          const targetNodeId = (event.target as HTMLElement).closest('.react-flow__node')?.getAttribute('data-id');
+          if (!targetNodeId) {
+            // Open node creation modal at this position
+            setShowAddNodeSheet(true);
+            
+            // Listen for node creation
+            const createNodeListener = () => {
+              const newNodeId = `node_${Date.now()}`;
+              
+              // Create a connection from/to the new node based on handle type
+              setTimeout(() => {
+                if (connectingHandleType === 'source') {
+                  // Handle was output, so connect from the source node to the new node
+                  setEdges(edges => addEdge({
+                    id: `e-${connectingNodeId}-${newNodeId}`,
+                    source: connectingNodeId,
+                    target: newNodeId,
+                    sourceHandle: 'out',
+                    targetHandle: 'in',
+                    type: 'smoothstep',
+                    animated: true,
+                    style: { stroke: '#94a3b8' }
+                  }, edges));
+                } else {
+                  // Handle was input, so connect from the new node to the target node
+                  setEdges(edges => addEdge({
+                    id: `e-${newNodeId}-${connectingNodeId}`,
+                    source: newNodeId,
+                    target: connectingNodeId,
+                    sourceHandle: 'out',
+                    targetHandle: 'in',
+                    type: 'smoothstep',
+                    animated: true,
+                    style: { stroke: '#94a3b8' }
+                  }, edges));
+                }
+              }, 100);
+              
+              // Remove the listener after execution
+              document.removeEventListener('nodeCreated', createNodeListener);
+            };
+            
+            // Add a custom event listener to handle node creation
+            document.addEventListener('nodeCreated', createNodeListener);
+          }
+        }
+        
+        // Reset connection state
+        setConnectingNodeId(null);
+        setConnectingHandleType(null);
+      },
+      [connectingNodeId, connectingHandleType, readOnly, screenToFlowPosition, setEdges]
+    );
+
     return (
       <>
         <ReactFlow
@@ -599,6 +713,9 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           onNodesChange={onNodesChange as any}
           onEdgesChange={onEdgesChange}
           onConnect={!readOnly ? onConnect : undefined}
+          onConnectStart={!readOnly ? onConnectStart : undefined}
+          onConnectEnd={!readOnly ? onConnectEnd : undefined}
+          connectionLineType={ConnectionLineType.SmoothStep}
           nodeTypes={nodeTypes}
           fitView
           minZoom={0.1}

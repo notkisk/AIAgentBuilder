@@ -385,7 +385,21 @@ const EnhancedToolNode = ({ data, selected, id }: NodeProps<ToolNodeData>) => {
               {Object.entries(params).length > 0 ? (
                 Object.entries(params).map(([key, value], index) => (
                   <div key={index} className="flex flex-col">
-                    <span className="font-medium text-[10px] uppercase tracking-wide opacity-70">{key}</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-[10px] uppercase tracking-wide opacity-70">{key}</span>
+                      {onConfigureNode && (
+                        <button 
+                          className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded-full"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onConfigureNode(id);
+                          }}
+                          title="Edit parameter"
+                        >
+                          <Code size={10} className="opacity-50 hover:opacity-100 transition-opacity" />
+                        </button>
+                      )}
+                    </div>
                     <Badge 
                       variant="outline" 
                       className="mt-0.5 py-0.5 px-1 h-auto text-left justify-start font-normal"
