@@ -34,7 +34,8 @@ import {
   Clipboard,
   Maximize2,
   Minimize2,
-  MoreHorizontal
+  MoreHorizontal,
+  Send
 } from 'lucide-react';
 
 export type IconType = React.FC<{ className?: string }>;
@@ -79,8 +80,11 @@ export const Icons: IconsType = {
   clipboard: Clipboard,
   share2: Share2,
   maximize: Maximize2,
+  maximize2: Maximize2,
   minimize: Minimize2,
-  more: MoreHorizontal
+  minimize2: Minimize2,
+  more: MoreHorizontal,
+  send: Send
 };
 
 export default Icons;

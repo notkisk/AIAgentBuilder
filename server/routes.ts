@@ -10,6 +10,7 @@ import {
   WorkflowNodesSchema 
 } from "@shared/schema";
 import { createModifiedWorkflow, createNewWorkflow } from "./workflowService";
+import { chatWithAssistant } from "./assistantService";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -506,6 +507,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Chat-based workflow modification API
+  // AI Assistant Chat Endpoint
+  app.post("/api/assistant/chat", async (req, res) => {
+    try {
+      const { message, workflowContext } = req.body;
+      
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ message: "Invalid message. A string message is required." });
+      }
+      
+      if (!workflowContext || !workflowContext.nodes || !Array.isArray(workflowContext.nodes)) {
+        return res.status(400).json({ message: "Invalid workflow context. A valid workflow nodes array is required." });
+      }
+      
+      // Call the assistant service
+      const response = await chatWithAssistant(message, workflowContext);
+      
+      // Return the response
+      res.json(response);
+    } catch (error) {
+      console.error("Error in chat assistant:", error);
+      res.status(500).json({ message: "Failed to process chat request" });
+    }
+  });
+
   app.post("/api/workflows/modify", async (req, res) => {
     try {
       const { prompt, nodes, workflowId } = req.body;

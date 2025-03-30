@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ChatWorkflowInterface } from './ChatWorkflowInterface';
+import { ChatAssistant } from './ChatAssistant';
 import { NodeCreationContextMenu } from './NodeCreationContextMenu';
 import EnhancedToolNode from './EnhancedToolNode';
 import { Icons } from '../ui/icons';
@@ -397,10 +397,12 @@ export function IntegratedWorkflowBuilder({
                   !isMobile && activeTab === "chat-interface" && "border-l-0"
                 )}
               >
-                <ChatWorkflowInterface 
+                <ChatAssistant 
                   workflowNodes={convertToWorkflowNodes(nodes, edges)}
                   onWorkflowUpdate={handleWorkflowUpdate}
                   workflowId={workflowId}
+                  expanded={activeTab === "chat-interface"}
+                  onToggleExpand={() => setActiveTab(activeTab === "chat-interface" ? "visual-builder" : "chat-interface")}
                 />
               </div>
             </div>
