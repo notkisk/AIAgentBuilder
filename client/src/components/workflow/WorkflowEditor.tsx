@@ -121,7 +121,7 @@ const getToolIcon = (toolName: string): ToolIconData => {
       label: 'Slack'
     }
   };
-  
+
   // Default icon if no match is found
   const defaultIcon: ToolIconData = { 
     icon: (
@@ -131,7 +131,7 @@ const getToolIcon = (toolName: string): ToolIconData => {
     ),
     label: toolName.substring(0, 4)
   };
-  
+
   return toolIcons[toolName] || defaultIcon;
 };
 
@@ -149,7 +149,7 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
     darkBg: '#1f2937',
     darkText: '#f9fafb',
   };
-  
+
   // Get tool icon and label
   const toolIconData = getToolIcon(tool);
 
@@ -266,12 +266,12 @@ const nodeTypes: NodeTypes = {
 // Convert internal React Flow nodes to our data format
 const getWorkflowNodesFromFlow = (nodes: Node[], edges: Edge[]): WorkflowNode[] => {
   const nodeConnections: Record<string, string> = {};
-  
+
   // Build connection map
   edges.forEach(edge => {
     nodeConnections[edge.source] = edge.target;
   });
-  
+
   return nodes.map(node => ({
     id: node.id,
     tool: node.data.tool,
@@ -298,20 +298,20 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   ): { nodes: Node[], edges: Edge[] } => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
-    
+
     // Calculate levels for nodes (depth in workflow)
     const nodeLevels: Record<string, number> = {};
     const calculateLevels = (nodeId: string, level: number) => {
       if (nodeLevels[nodeId] === undefined || level > nodeLevels[nodeId]) {
         nodeLevels[nodeId] = level;
       }
-      
+
       const node = workflowNodes.find(n => n.id === nodeId);
       if (node?.next) {
         calculateLevels(node.next, level + 1);
       }
     };
-    
+
     // Start from all nodes that don't have incoming connections
     const startNodeIds = new Set(workflowNodes.map(n => n.id));
     workflowNodes.forEach(node => {
@@ -319,9 +319,9 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         startNodeIds.delete(node.next);
       }
     });
-    
+
     startNodeIds.forEach(id => calculateLevels(id, 0));
-    
+
     // Group nodes by level
     const nodesByLevel: Record<number, WorkflowNode[]> = {};
     Object.entries(nodeLevels).forEach(([nodeId, level]) => {
@@ -333,21 +333,21 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         nodesByLevel[level].push(node);
       }
     });
-    
+
     // Position nodes
     const levelGap = 200;
     const nodeGap = 250;
     const maxNodesInLevel = Math.max(...Object.values(nodesByLevel).map(nodes => nodes.length), 1);
-    
+
     Object.entries(nodesByLevel).forEach(([level, levelNodes]) => {
       const levelInt = parseInt(level);
       const levelWidth = levelNodes.length * nodeGap;
       const startX = (maxNodesInLevel * nodeGap - levelWidth) / 2;
-      
+
       levelNodes.forEach((node, index) => {
         const x = startX + index * nodeGap;
         const y = levelInt * levelGap;
-        
+
         // Calculate available inputs for this node
         const availableInputs = workflowNodes
           .filter(inputNode => inputNode.id !== node.id)
@@ -356,7 +356,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             function: inputNode.function,
             label: `${inputNode.tool}:${inputNode.function}`,
           }));
-        
+
         nodes.push({
           id: node.id,
           type: 'tool',
@@ -372,7 +372,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           },
           position: { x, y },
         });
-        
+
         if (node.next) {
           edges.push({
             id: `e${node.id}-${node.next}`,
@@ -387,13 +387,13 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         }
       });
     });
-    
+
     return { nodes, edges };
   };
 
   // Convert initial workflow nodes to React Flow format
   const { nodes: initialFlowNodes, edges: initialFlowEdges } = calculateNodePositions(initialNodes || [], undefined, undefined, readOnly);
-  
+
   // Component with interactive controls (nested to use ReactFlow hooks)
   const InteractiveFlow = () => {
     const [nodes, setNodes, onNodesChange] = useNodesState(initialFlowNodes);
@@ -412,7 +412,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     const [connectingNodeId, setConnectingNodeId] = useState<string | null>(null);
     const [connectingHandleType, setConnectingHandleType] = useState<'source' | 'target' | null>(null);
     const [connectingPos, setConnectingPos] = useState({ x: 0, y: 0 });
-    
+
     // Set up handlers for node configuration
     const handleConfigureNode = useCallback((nodeId: string) => {
       const node = nodes.find(n => n.id === nodeId);
@@ -425,17 +425,17 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         });
       }
     }, [nodes]);
-    
+
     // Handler for deleting a node
     const handleDeleteNode = useCallback((nodeId: string) => {
       // Remove the node
       setNodes(nds => nds.filter(node => node.id !== nodeId));
-      
+
       // Remove all connected edges
       setEdges(eds => eds.filter(edge => 
         edge.source !== nodeId && edge.target !== nodeId
       ));
-      
+
       // Update other nodes that might reference this node
       const updatedNodes = nodes.map(node => {
         if (node.data.params) {
@@ -457,16 +457,16 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         }
         return node;
       });
-      
+
       setNodes(updatedNodes);
     }, [nodes, setNodes, setEdges]);
-    
+
     // Update parent component when nodes/edges change
     useEffect(() => {
       if (onNodesChange && typeof onNodesChange === 'function') {
         // Convert to our workflow format before sending to parent component
         const workflowNodes = getWorkflowNodesFromFlow(nodes, edges);
-        
+
         try {
           // Explicitly cast onNodesChange to accept our WorkflowNode[] type
           (onNodesChange as (nodes: WorkflowNode[]) => void)(workflowNodes);
@@ -475,14 +475,14 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         }
       }
     }, [nodes, edges, onNodesChange]);
-    
+
     // Fit view when nodes change
     useEffect(() => {
       setTimeout(() => {
         fitView({ padding: 0.2 });
       }, 50);
     }, [initialFlowNodes, initialFlowEdges, fitView]);
-    
+
     // Handle connections between nodes
     const onConnect = useCallback((connection: Connection) => {
       setEdges(eds => {
@@ -497,38 +497,38 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         }, filteredEdges);
       });
     }, [setEdges]);
-    
+
     // Handle adding a new node
     const handleAddNode = () => {
       if (!selectedTool || !selectedFunction) return;
-      
+
       // Get tool function details
       const tool = availableTools.find(t => t.name === selectedTool);
       const functionDetails = tool?.functions.find(f => f.name === selectedFunction);
-      
+
       if (!tool || !functionDetails) return;
-      
+
       // Generate default params from function parameters
       const defaultParams: Record<string, string> = {};
       Object.keys(functionDetails.parameters || {}).forEach(paramName => {
         defaultParams[paramName] = newNodeParams[paramName] || '';
       });
-      
+
       // Generate a unique ID for the new node
       const newId = `node_${Date.now()}`;
-      
+
       // Calculate available inputs for this node
       const availableInputs = nodes.map(node => ({
         nodeId: node.id,
         function: node.data.function,
         label: `${node.data.tool}:${node.data.function}`,
       }));
-      
+
       // Use the connecting position if available, otherwise use a random position
       const position = connectingNodeId ? 
         connectingPos : 
         { x: Math.random() * 300, y: Math.random() * 300 };
-      
+
       // Add the new node
       const newNode: Node = {
         id: newId,
@@ -544,15 +544,15 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         },
         position
       };
-      
+
       setNodes(nds => [...nds, newNode]);
-      
+
       // Reset form state
       setSelectedTool('');
       setSelectedFunction('');
       setNewNodeParams({});
       setShowAddNodeSheet(false);
-      
+
       // If this node was created from dragging a connection, dispatch a custom event
       if (connectingNodeId) {
         // Dispatch custom event to notify that a node was created
@@ -560,7 +560,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           detail: { nodeId: newId } 
         }));
       }
-      
+
       // Update layout
       setTimeout(() => {
         const workflowNodes = getWorkflowNodesFromFlow([...nodes, newNode], edges);
@@ -574,11 +574,11 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         fitView({ padding: 0.2 });
       }, 50);
     };
-    
+
     // Update node configuration
     const handleUpdateNodeConfig = () => {
       if (!selectedNode || !nodeConfig) return;
-      
+
       setNodes(nds => 
         nds.map(node => {
           if (node.id === selectedNode) {
@@ -595,19 +595,19 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           return node;
         })
       );
-      
+
       setSelectedNode(null);
       setNodeConfig(null);
     };
-    
+
     // Get functions for selected tool
     const functionsForSelectedTool = 
       availableTools.find(t => t.name === selectedTool)?.functions || [];
-    
+
     // Get parameters for selected function
     const parametersForSelectedFunction = 
       functionsForSelectedTool.find(f => f.name === selectedFunction)?.parameters || {};
-    
+
     // Handle connection start event for drag-to-create functionality
     const onConnectStart = useCallback(
       (event: React.MouseEvent | React.TouchEvent, { nodeId, handleType }: OnConnectStartParams) => {
@@ -635,7 +635,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           // Handle both mouse and touch events to get coordinates
           let clientX = 0;
           let clientY = 0;
-          
+
           if (isMouseEvent(event)) {
             clientX = event.clientX;
             clientY = event.clientY;
@@ -643,24 +643,24 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             clientX = event.touches[0].clientX;
             clientY = event.touches[0].clientY;
           }
-          
+
           const dropPosition = screenToFlowPosition({
             x: clientX - reactFlowBounds.left,
             y: clientY - reactFlowBounds.top,
           });
-          
+
           setConnectingPos(dropPosition);
-          
+
           // Check if we're not over another node
           const targetNodeId = (event.target as HTMLElement).closest('.react-flow__node')?.getAttribute('data-id');
           if (!targetNodeId) {
             // Open node creation modal at this position
             setShowAddNodeSheet(true);
-            
+
             // Listen for node creation
             const createNodeListener = () => {
               const newNodeId = `node_${Date.now()}`;
-              
+
               // Create a connection from/to the new node based on handle type
               setTimeout(() => {
                 if (connectingHandleType === 'source') {
@@ -689,16 +689,16 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   }, edges));
                 }
               }, 100);
-              
+
               // Remove the listener after execution
               document.removeEventListener('nodeCreated', createNodeListener);
             };
-            
+
             // Add a custom event listener to handle node creation
             document.addEventListener('nodeCreated', createNodeListener);
           }
         }
-        
+
         // Reset connection state
         setConnectingNodeId(null);
         setConnectingHandleType(null);
@@ -709,6 +709,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     return (
       <>
         <ReactFlow
+          style={{ height: '100%' }}
           nodes={nodes}
           edges={edges}
           onNodesChange={onNodesChange as any}
@@ -737,7 +738,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               onClick={() => zoomOut()}
               className="p-2 rounded bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fillnone" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
             </button>
             <button 
               onClick={() => fitView({ padding: 0.2 })}
@@ -746,7 +747,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
             </button>
           </Panel>
-          
+
           {!readOnly && (
             <Panel position="top-left">
               <Button 
@@ -758,7 +759,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </Panel>
           )}
         </ReactFlow>
-        
+
         {/* Sheet for node configuration */}
         {selectedNode && nodeConfig && (
           <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
@@ -769,18 +770,18 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   Update parameters for this node.
                 </SheetDescription>
               </SheetHeader>
-              
+
               <div className="py-4 space-y-4">
                 <div className="space-y-1">
                   <Label>Tool</Label>
                   <div className="font-medium">{nodeConfig.tool}</div>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label>Function</Label>
                   <div className="font-medium">{nodeConfig.function}</div>
                 </div>
-                
+
                 <div className="space-y-3 mt-4">
                   <Label>Parameters</Label>
                   {Object.entries(nodeConfig.params).map(([key, value]) => (
@@ -801,7 +802,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   ))}
                 </div>
               </div>
-              
+
               <SheetFooter>
                 <SheetClose asChild>
                   <Button variant="outline">Cancel</Button>
@@ -811,7 +812,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
             </SheetContent>
           </Sheet>
         )}
-        
+
         {/* Sheet for adding new node */}
         <Sheet open={showAddNodeSheet} onOpenChange={setShowAddNodeSheet}>
           <SheetContent>
@@ -821,7 +822,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                 Configure and add a new node to your workflow.
               </SheetDescription>
             </SheetHeader>
-            
+
             <div className="py-4 space-y-4">
               <div className="space-y-1">
                 <Label htmlFor="tool-select">Select Tool</Label>
@@ -841,7 +842,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {selectedTool && (
                 <div className="space-y-1">
                   <Label htmlFor="function-select">Select Function</Label>
@@ -862,7 +863,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   </Select>
                 </div>
               )}
-              
+
               {selectedFunction && Object.keys(parametersForSelectedFunction).length > 0 && (
                 <div className="space-y-3 mt-4">
                   <Label>Parameters</Label>
@@ -883,7 +884,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                 </div>
               )}
             </div>
-            
+
             <SheetFooter>
               <SheetClose asChild>
                 <Button variant="outline">Cancel</Button>
@@ -900,7 +901,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       </>
     );
   };
-  
+
   if (!initialNodes || initialNodes.length === 0) {
     return (
       <div className="flex items-center justify-center h-40 bg-gray-100 dark:bg-gray-800 rounded-md">
@@ -912,7 +913,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       </div>
     );
   }
-  
+
   return (
     <div className="h-[500px] w-full">
       <ReactFlowProvider>

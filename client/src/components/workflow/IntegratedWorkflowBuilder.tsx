@@ -280,8 +280,8 @@ export function IntegratedWorkflowBuilder({
   
   return (
     <ReactFlowProvider>
-      <div ref={containerRef} className="h-full w-full flex flex-col overflow-hidden">
-        <Card className="h-full w-full flex flex-col overflow-hidden">
+      <div ref={containerRef} style={{ height: '80vh' }} className="w-full flex flex-col overflow-hidden">
+        <Card className="w-full flex flex-col overflow-hidden" style={{ height: '100%' }}>
           <div className="border-b p-4 flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="flex items-center gap-2">
