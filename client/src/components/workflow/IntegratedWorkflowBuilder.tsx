@@ -177,7 +177,7 @@ export function IntegratedWorkflowBuilder({
   }, [setEdges]);
   
   // Handle starting a connection drag
-  const onConnectStart = useCallback((event: React.MouseEvent, params: any) => {
+  const onConnectStart: OnConnectStart = useCallback((event, params) => {
     if (params.nodeId) {
       setSourceNodeForConnection(params.nodeId);
     }

@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { getToolColor } from '@/lib/agent-tools';
 import { Icons } from '../ui/icons';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 import { cn } from '@/lib/utils';
 
@@ -243,32 +243,34 @@ const EnhancedToolNode = memo(({ id, data, selected }: NodeProps<ToolNodeData>) 
           selected ? "opacity-100" : ""
         )}
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full shadow-md">
-              <Icons.edit className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Edit Node</TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full shadow-md">
-              <Icons.copy className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Duplicate</TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button size="icon" variant="destructive" className="h-6 w-6 rounded-full shadow-md">
-              <Icons.trash className="h-3 w-3" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Delete Node</TooltipContent>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full shadow-md">
+                <Icons.edit className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit Node</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="secondary" className="h-6 w-6 rounded-full shadow-md">
+                <Icons.copy className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Duplicate</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="destructive" className="h-6 w-6 rounded-full shadow-md">
+                <Icons.trash className="h-3 w-3" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete Node</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
