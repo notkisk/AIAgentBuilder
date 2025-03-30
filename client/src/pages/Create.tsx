@@ -44,13 +44,13 @@ export default function Create() {
     agentName, setAgentName,
     agentDescription, setAgentDescription
   } = useWorkflow();
-  
+
   const loadExampleWebScraper = () => {
     setAgentName("Website Content Monitor");
     setAgentDescription("Monitors a website for changes, summarizes new content with AI, and sends email notifications");
     setWorkflowName("Web Scraper to Email Workflow");
     setWorkflowDescription("Scrapes website content, summarizes it with AI, and sends email notifications");
-    
+
     setWorkflowNodes([
       {
         id: "1",
@@ -78,7 +78,7 @@ export default function Create() {
       }
     ]);
   };
-  
+
 
   const availableTools = [
     {
@@ -162,19 +162,19 @@ export default function Create() {
       ]
     }
   ];
-  
+
 
   const handleNodesChange = (nodes: WorkflowNode[]) => {
     setWorkflowNodes(nodes);
   };
-  
+
 
   useEffect(() => {
     if (workflowNodes && workflowNodes.length > 0 && activeTab === "chat") {
       setActiveTab("visual");
     }
   }, [workflowNodes, activeTab]);
-  
+
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -189,14 +189,14 @@ export default function Create() {
           }
         }
       );
-      
+
       if (!workflowResponse.ok) {
         const error = await workflowResponse.json();
         throw new Error(error.message || 'Failed to create workflow');
       }
-      
+
       const workflow = await workflowResponse.json();
-      
+
       const agentResponse = await apiRequest(
         'POST',
         '/api/agents',
@@ -209,12 +209,12 @@ export default function Create() {
           status: 'inactive'
         }
       );
-      
+
       if (!agentResponse.ok) {
         const error = await agentResponse.json();
         throw new Error(error.message || 'Failed to create agent');
       }
-      
+
       return await agentResponse.json();
     },
     onSuccess: (data) => {
@@ -223,7 +223,7 @@ export default function Create() {
         description: `Your agent "${agentName}" is ready to use.`,
         variant: "default",
       });
-      
+
       navigate(`/agents/${data.id}`);
     },
     onError: (error) => {
@@ -234,7 +234,7 @@ export default function Create() {
       });
     }
   });
-  
+
 
   const handleSave = () => {
     createMutation.mutate();
@@ -262,7 +262,7 @@ export default function Create() {
         </p>
       </div>
 
-      <Card className="flex-1 flex flex-col">
+      <Card className="rounded-lg border bg-background text-foreground dark:bg-card dark:text-card-foreground shadow-sm flex-1 flex flex-col transition-colors duration-200">
         <CardHeader>
           <CardTitle>AI-Powered Workflow Builder</CardTitle>
           <CardDescription>
@@ -279,7 +279,7 @@ export default function Create() {
             >
               Load Example Workflow
             </Button>
-            
+
             {hasAiProvider && (
               <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                 AI-Powered 
@@ -291,7 +291,7 @@ export default function Create() {
               </Badge>
             )}
           </div>
-          
+
           <div className="flex-1 min-h-[500px] border rounded-md overflow-hidden">
             <IntegratedWorkflowBuilder 
               initialNodes={workflowNodes || []}
@@ -350,7 +350,7 @@ export default function Create() {
           <TabsTrigger value="examples">Examples</TabsTrigger>
           <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="examples" className="space-y-4 data-[state=active]:flex data-[state=inactive]:hidden flex-col">
           <Card>
             <CardHeader>
@@ -373,7 +373,7 @@ export default function Create() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Website Update Tracker</CardTitle>
@@ -396,7 +396,7 @@ export default function Create() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="how-it-works" className="space-y-4 data-[state=active]:flex data-[state=inactive]:hidden flex-col">
           <Card>
             <CardHeader>
@@ -410,7 +410,7 @@ export default function Create() {
                   you want to use (Gmail, Slack, OpenAI, etc.) and what actions you want the agent to take.
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">2. AI Analysis</h3>
                 <p className="text-gray-600 dark:text-gray-300">
@@ -418,7 +418,7 @@ export default function Create() {
                   The AI determines the optimal sequence of operations to achieve your goal.
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">3. Workflow Generation</h3>
                 <p className="text-gray-600 dark:text-gray-300">
@@ -426,7 +426,7 @@ export default function Create() {
                   Each step specifies a tool, function, and parameters, with proper connections between steps.
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">4. Agent Creation</h3>
                 <p className="text-gray-600 dark:text-gray-300">
