@@ -17,7 +17,9 @@ import ReactFlow, {
   addEdge,
   ConnectionLineType,
   OnConnectStartParams,
-  NodeChange
+  NodeChange,
+  ContextMenu,
+  MenuItem,
 } from 'reactflow';
 import { getToolColor } from '@/lib/agent-tools';
 import { 
@@ -189,7 +191,7 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
         className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
-          handleDeleteNode(id);
+          onDeleteNode(id);
         }}
         title="Remove Node"
       >
@@ -257,7 +259,7 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
               className="mt-2 w-full text-xs"
               onClick={(e) => {
                 e.stopPropagation();
-                handleDeleteNode(id);
+                onDeleteNode(id);
               }}
             >
               Delete Node
@@ -407,7 +409,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   // Component with interactive controls (nested to use ReactFlow hooks)
   const InteractiveFlow = () => {
-    const [nodes, setNodes, onNodesChange] = useNodesState(initialFlowNodes);
+    const [nodes, , onNodesChange] = useNodesState(initialFlowNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialFlowEdges);
     const { fitView, zoomIn, zoomOut, screenToFlowPosition } = useReactFlow();
     const [selectedNode, setSelectedNode] = useState<string | null>(null);
@@ -423,6 +425,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     const [connectingNodeId, setConnectingNodeId] = useState<string | null>(null);
     const [connectingHandleType, setConnectingHandleType] = useState<'source' | 'target' | null>(null);
     const [connectingPos, setConnectingPos] = useState({ x: 0, y: 0 });
+    const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
     // Set up handlers for node configuration
     const handleConfigureNode = useCallback((nodeId: string) => {
@@ -717,6 +720,32 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       [connectingNodeId, connectingHandleType, readOnly, screenToFlowPosition, setEdges]
     );
 
+    const onNodeContextMenu = useCallback(
+      (event: any, node: Node) => {
+        event.preventDefault();
+        setSelectedNode(node.id);
+        // Add your context menu logic here.  For example:
+        // setContextMenu({
+        //   x: event.clientX,
+        //   y: event.clientY,
+        //   nodeId: node.id,
+        //   options: [
+        //     { label: 'Edit', onClick: () => handleConfigureNode(node.id) },
+        //     { label: 'Delete', onClick: () => handleDeleteNode(node.id) },
+        //   ],
+        // });
+        // Example Context Menu:
+        const contextMenu = (
+          <ContextMenu x={event.clientX} y={event.clientY}>
+            <MenuItem onClick={() => handleConfigureNode(node.id)}>Edit</MenuItem>
+            <MenuItem onClick={() => handleDeleteNode(node.id)}>Delete</MenuItem>
+          </ContextMenu>
+        );
+        console.log(contextMenu);
+      },
+      [handleDeleteNode, handleConfigureNode]
+    );
+
     return (
       <>
         <ReactFlow
@@ -728,6 +757,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           onConnect={!readOnly ? onConnect : undefined}
           onConnectStart={!readOnly ? onConnectStart : undefined}
           onConnectEnd={!readOnly ? onConnectEnd : undefined}
+          onNodeContextMenu={!readOnly ? onNodeContextMenu : undefined}
           connectionLineType={ConnectionLineType.SmoothStep}
           nodeTypes={nodeTypes}
           fitView
@@ -735,9 +765,9 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           maxZoom={2}
           proOptions={{ hideAttribution: true }}
           className="bg-gray-50 dark:bg-gray-900 rounded-md"
+          ref={reactFlowWrapper}
         >
-          <Background color="#aaa" gap={16} />
-          <Controls showInteractive={false} />
+          <Background color="#aaa" gap={16} /><Controls showInteractive={false} />
           <Panel position="top-right" className="flex space-x-2">
             <button 
               onClick={() => zoomIn()}
@@ -749,7 +779,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
               onClick={() => zoomOut()}
               className="p-2 rounded bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fillnone" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
             </button>
             <button 
               onClick={() => fitView({ padding: 0.2 })}
