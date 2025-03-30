@@ -138,6 +138,10 @@ export const NodeSchema = z.object({
   function: z.string(),
   params: NodeParamSchema,
   next: z.string().optional(),
+  position: z.object({
+    x: z.number(),
+    y: z.number()
+  }).optional(),
 });
 
 export const WorkflowNodesSchema = z.object({

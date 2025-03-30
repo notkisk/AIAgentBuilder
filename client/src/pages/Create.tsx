@@ -297,14 +297,9 @@ export default function Create() {
               initialNodes={workflowNodes || []}
               onNodesChange={handleNodesChange}
               availableTools={availableTools}
+              onSave={() => setSaveDialogOpen(true)}
             />
           </div>
-          <Button 
-            onClick={() => setSaveDialogOpen(true)}
-            className="mt-4"
-          >
-            Save Agent
-          </Button>
         </CardContent>
       </Card>
 

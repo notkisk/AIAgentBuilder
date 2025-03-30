@@ -11,7 +11,8 @@ import ReactFlow, {
   Panel,
   useNodesState,
   useEdgesState,
-  Connection
+  Connection,
+  OnConnectStart
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { WorkflowNode } from '@shared/schema';
@@ -57,7 +58,8 @@ function convertToFlowNodes(nodes: WorkflowNode[]): Node[] {
   if (!nodes) return [];
   return nodes.map((node, index) => ({
     id: node.id,
-    position: { x: 250 * (index % 3), y: 150 * Math.floor(index / 3) },
+    // Use existing position if available, otherwise calculate default position
+    position: node.position || { x: 250 * (index % 3), y: 150 * Math.floor(index / 3) },
     data: {
       label: node.tool === 'chatgpt' ? 'ChatGPT' : node.tool,
       tool: node.tool,
@@ -101,7 +103,8 @@ function convertToWorkflowNodes(flowNodes: Node[], edges: Edge[]): WorkflowNode[
     tool: node.data.tool,
     function: node.data.function,
     params: node.data.params || {},
-    next: connectionMap[node.id]
+    next: connectionMap[node.id],
+    position: node.position // Preserve position in the workflow node
   }));
 }
 
@@ -110,8 +113,9 @@ export function IntegratedWorkflowBuilder({
   onNodesChange: onWorkflowNodesChange,
   readOnly = false,
   workflowId,
-  availableTools = []
-}: IntegratedWorkflowBuilderProps) {
+  availableTools = [],
+  onSave
+}: IntegratedWorkflowBuilderProps & { onSave?: () => void }) {
   // ReactFlow states
   const [nodes, setNodes, onNodesChange] = useNodesState(convertToFlowNodes(initialNodes));
   const [edges, setEdges, onEdgesChange] = useEdgesState(createEdgesFromConnections(initialNodes));
@@ -303,7 +307,12 @@ export function IntegratedWorkflowBuilder({
               </Tabs>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-2"
+                onClick={onSave}
+              >
                 <Icons.save className="h-4 w-4" />
                 <span className="hidden sm:inline">Save</span>
               </Button>
