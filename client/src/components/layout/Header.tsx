@@ -1,5 +1,7 @@
 import { useApp } from "@/contexts/AppContext";
 import { useAgent } from "@/contexts/AgentContext";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Header() {
   const { sidebarOpen, toggleSidebar, currentView } = useApp();
@@ -18,14 +20,16 @@ export default function Header() {
         return "Execution Logs";
       case "settings":
         return "Settings";
+      case "create":
+        return "Create Agent";
       default:
         return "Dashboard";
     }
   };
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-      <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+    <header className="macos-toolbar">
+      <div className="flex items-center justify-between w-full">
         <div className="flex items-center">
           {/* Mobile menu button */}
           <button
@@ -34,40 +38,30 @@ export default function Header() {
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
+              className="h-5 w-5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
+              strokeWidth={1.5}
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
                 d="M4 6h16M4 12h16M4 18h16"
               />
             </svg>
           </button>
-          <h2 className="text-xl font-medium">{getHeaderTitle()}</h2>
+          <h2 className="text-base font-medium text-gray-800 dark:text-gray-200">{getHeaderTitle()}</h2>
         </div>
         <div className="flex items-center space-x-4">
-          <button
+          <Button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition"
+            size="sm"
+            className="bg-primary hover:bg-primary/90 text-white"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 mr-2"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Create Agent
-          </button>
+            <Plus className="h-4 w-4 mr-1" />
+            New Agent
+          </Button>
         </div>
       </div>
     </header>
