@@ -170,16 +170,17 @@ export default function Create() {
   const createMutation = useMutation({
     mutationFn: async () => {
       // First create the workflow
-      const workflowResponse = await apiRequest('/api/workflows', {
-        method: 'POST',
-        body: JSON.stringify({
+      const workflowResponse = await apiRequest(
+        'POST',
+        '/api/workflows',
+        {
           name: workflowName,
           description: workflowDescription,
           nodes: {
             nodes: workflowNodes || []
           }
-        })
-      });
+        }
+      );
       
       if (!workflowResponse.ok) {
         const error = await workflowResponse.json();
@@ -189,17 +190,18 @@ export default function Create() {
       const workflow = await workflowResponse.json();
       
       // Then create the agent linked to the workflow
-      const agentResponse = await apiRequest('/api/agents', {
-        method: 'POST',
-        body: JSON.stringify({
+      const agentResponse = await apiRequest(
+        'POST',
+        '/api/agents',
+        {
           name: agentName,
           description: agentDescription,
           prompt: `Visually created agent: ${agentDescription}`,
           tools: Array.from(new Set((workflowNodes || []).map(node => node.tool))),
           workflowId: workflow.id,
           status: 'inactive'
-        })
-      });
+        }
+      );
       
       if (!agentResponse.ok) {
         const error = await agentResponse.json();
@@ -278,51 +280,34 @@ export default function Create() {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="agent-name">Agent Name</Label>
-                    <Input 
-                      id="agent-name" 
-                      placeholder="My Agent" 
-                      value={agentName}
-                      onChange={(e) => setAgentName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="agent-description">Agent Description</Label>
-                    <Textarea 
-                      id="agent-description" 
-                      placeholder="Describe what this agent does" 
-                      className="min-h-[80px]"
-                      value={agentDescription}
-                      onChange={(e) => setAgentDescription(e.target.value)}
-                    />
-                  </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="agent-name">Agent Name</Label>
+                  <Input 
+                    id="agent-name" 
+                    placeholder="My Agent" 
+                    value={agentName}
+                    onChange={(e) => {
+                      setAgentName(e.target.value);
+                      // Synchronize workflow name with agent name
+                      setWorkflowName(e.target.value);
+                    }}
+                  />
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="workflow-name">Workflow Name</Label>
-                    <Input 
-                      id="workflow-name" 
-                      placeholder="My Workflow" 
-                      value={workflowName}
-                      onChange={(e) => setWorkflowName(e.target.value)}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="workflow-description">Workflow Description</Label>
-                    <Textarea 
-                      id="workflow-description" 
-                      placeholder="Describe your workflow" 
-                      className="min-h-[80px]"
-                      value={workflowDescription}
-                      onChange={(e) => setWorkflowDescription(e.target.value)}
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="agent-description">Description</Label>
+                  <Textarea 
+                    id="agent-description" 
+                    placeholder="Describe what this agent does" 
+                    className="min-h-[80px]"
+                    value={agentDescription}
+                    onChange={(e) => {
+                      setAgentDescription(e.target.value);
+                      // Synchronize workflow description with agent description
+                      setWorkflowDescription(e.target.value);
+                    }}
+                  />
                 </div>
               </div>
               

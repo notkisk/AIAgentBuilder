@@ -1,0 +1,51 @@
+**Goal:** Refactor and enhance the UI/UX of a Visual Workflow Builder React application based on user feedback and best practices for node-based editors.
+
+**Context:**
+The application allows users to visually design workflows for an "Agent" by adding nodes representing actions (like fetching web pages, summarizing text) and connecting them. The current UI is functional but has several areas for improvement regarding clarity, usability, and efficiency. Assume the frontend is built with React, potentially using a library like React Flow (or a similar canvas/graph library) and styled with CSS/TailwindCSS.
+
+**Provided Image:** (Imagine the user uploads the image you provided here)
+
+**Critique Summary & Required Improvements:**
+
+1.  **Clarify Agent vs. Workflow Relationship:**
+    *   **Problem:** Redundant "Agent Name/Description" and "Workflow Name/Description" fields with identical content cause confusion.
+    *   **Requirement:** Modify the UI to present a clear hierarchy.
+        *   **Option A (Preferred if 1 Agent = 1 Workflow):** Combine the fields into a single "Agent Name" (or "Workflow Name") and "Description" section. Remove the duplication.
+        *   **Option B (If 1 Agent can have multiple Workflows):** Redesign the layout to clearly separate Agent-level configuration (perhaps in a sidebar or header) from the specific Workflow being edited on the canvas. The current side-by-side layout is confusing.
+    *   **Action:** Refactor the relevant React components and state management to reflect the chosen structure (assume Option A for simplicity if unsure).
+
+2.  **Simplify Canvas Controls:**
+    *   **Problem:** Duplicate zoom/pan controls (top-right icons and left-side buttons).
+    *   **Requirement:** Remove one set of controls. Standard practice is to keep the controls integrated with the canvas area.
+    *   **Action:** Remove the left-side zoom buttons (`+`, `-`, `fit-screen`). Ensure the top-right controls (`zoom-in`, `zoom-out`, `fit-view/expand`) are functional and sufficient.
+
+3.  **Improve Node Information Clarity:**
+    *   **Problem:** Abbreviations ("WE", "CH") are unclear. Parameter syntax (`$1.output`) is not user-friendly. Tool names ("webscraper", "chatgpt") are small.
+    *   **Requirements:**
+        *   Replace abbreviations ("WE", "CH") with clearer indicators. Options: Full text, descriptive icons, or tooltips on hover explaining the abbreviation. Implement tooltips as a minimum.
+        *   Make the tool source ("webscraper", "chatgpt") slightly more prominent or visually distinct within the node.
+        *   **Crucially:** Implement a user-friendly way to link node outputs to inputs instead of manual `$1.output` typing.
+            *   When a user focuses on an input field that expects another node's output, provide a dropdown/picker listing available outputs from connected preceding nodes (e.g., "Output from 'fetchPage' node").
+            *   Alternatively, enhance the visual connection process so dragging a connection *from* an output port *to* an input port automatically populates the input field with the correct reference.
+    *   **Action:** Update the Node component's rendering. Implement logic for the output variable picker/linking mechanism.
+
+4.  **Enhance Node Discovery:**
+    *   **Problem:** It's unclear how users find available nodes.
+    *   **Requirement:** Implement a node palette or dropdown menu that appears when the user clicks "Add Node". This menu should list available node types, possibly with icons and short descriptions, and ideally be searchable.
+    *   **Action:** Create a new component for the Node Palette/Selector and integrate it with the "Add Node" button's functionality.
+
+5.  **Refine Interactivity & Feedback:**
+    *   **Problem:** Lack of clear visual cues for interaction (connecting nodes) and feedback.
+    *   **Requirements:**
+        *   Provide clear visual affordances for input/output ports on nodes (e.g., slightly larger, change appearance on hover).
+        *   Implement visual feedback during drag-and-drop connection (show the line being dragged).
+        *   Add hover states to nodes and interactive elements.
+        *   Implement basic validation (e.g., visual indication if a required field is empty, prevent connecting incompatible ports if applicable).
+    *   **Action:** Update CSS/styling for hover/active states. Enhance the connection logic (likely within the React Flow `onConnect` handler or equivalent) to include visual feedback and basic validation.
+
+6.  **Minor Adjustments:**
+    *   Consider moving the "Create Agent" button closer to the top configuration section if using combined Agent/Workflow fields (Option A from point 1) or ensure it's clearly the final step.
+    *   Ensure consistent padding, margins, and font sizes.
+
+**Deliverable:**
+Provide refactored React component code snippets (functional components with hooks preferred), updated state management logic suggestions, CSS/Tailwind class adjustments, and potentially pseudo-code or descriptions for implementing the more complex interaction logic (like the variable picker or node palette). Focus on creating a more intuitive, less error-prone, and visually cleaner user experience. Suggest specific libraries (like headless UI components or icon libraries) if applicable.

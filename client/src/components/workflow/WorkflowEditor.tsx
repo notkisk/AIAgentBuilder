@@ -57,6 +57,77 @@ interface WorkflowEditorProps {
   }[];
 }
 
+interface ToolIconData {
+  icon: React.ReactNode;
+  label: string;
+}
+
+// Function to get tool icon or text
+const getToolIcon = (toolName: string): ToolIconData => {
+  // Map of tool names to visual icons or formatted names
+  const toolIcons: Record<string, ToolIconData> = {
+    'webscraper': { 
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 10L21 3M10 14L3 21M18 12C18 15.3137 15.3137 18 12 18C8.68629 18 6 15.3137 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12Z" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'Web'
+    },
+    'chatgpt': { 
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21.3901 11.6C21.6646 10.8 21.8018 10 21.8018 9.2C21.8018 5.4 18.6967 2 14.5953 2C12.2018 2 10.1329 3.2 8.79948 4.9C8.25246 4.8 7.84313 4.7 7.29611 4.7C3.46434 4.7 0.5 8 0.5 12C0.5 16 3.46434 19.3 7.29611 19.3C7.84313 19.3 8.25246 19.2 8.66179 19.1C10.1329 20.8 12.2018 22 14.5953 22C18.6967 22 21.8018 18.6 21.8018 14.8C21.8018 14 21.6646 13.2 21.3901 12.4" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14.5 8.5C14.5 8.5 13 10.5 12 10.5C11 10.5 9.5 8.5 9.5 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'AI'
+    },
+    'gmail': { 
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6M22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6M22 6L12 13L2 6" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'Mail'
+    },
+    'slack': { 
+      icon: (
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14.5 10C13.67 10 13 9.33 13 8.5V3.5C13 2.67 13.67 2 14.5 2C15.33 2 16 2.67 16 3.5V8.5C16 9.33 15.33 10 14.5 10Z" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M20.5 10H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M9.5 14C10.33 14 11 14.67 11 15.5V20.5C11 21.33 10.33 22 9.5 22C8.67 22 8 21.33 8 20.5V15.5C8 14.67 8.67 14 9.5 14Z" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8 15.5H3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M10 9.5C10 8.67 9.33 8 8.5 8H3.5C2.67 8 2 8.67 2 9.5C2 10.33 2.67 11 3.5 11H8.5C9.33 11 10 10.33 10 9.5Z" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M8.5 8V3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14 14.5C14 13.67 14.67 13 15.5 13H20.5C21.33 13 22 13.67 22 14.5C22 15.33 21.33 16 20.5 16H15.5C14.67 16 14 15.33 14 14.5Z" 
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M15.5 16V20.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      ),
+      label: 'Slack'
+    }
+  };
+  
+  // Default icon if no match is found
+  const defaultIcon: ToolIconData = { 
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    ),
+    label: toolName.substring(0, 4)
+  };
+  
+  return toolIcons[toolName] || defaultIcon;
+};
+
 // Custom node component for tool nodes
 const ToolNode = ({ data, selected, id }: NodeProps) => {
   const tool = data.tool;
@@ -71,31 +142,40 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
     darkBg: '#1f2937',
     darkText: '#f9fafb',
   };
+  
+  // Get tool icon and label
+  const toolIconData = getToolIcon(tool);
 
   return (
     <div 
-      className={`relative px-4 py-3 rounded-xl shadow-md border ${selected ? 'ring-2 ring-primary' : ''}`}
+      className={`relative px-4 py-3 rounded-lg shadow-md border ${selected ? 'ring-2 ring-primary' : ''}`}
       style={{
         backgroundColor: `${toolColor.bg}30`, // Add transparency
         borderColor: toolColor.bg,
         color: toolColor.text,
       }}
     >
-      {/* Output handle */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="out"
-        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white"
-      />
+      {/* Input handle with tooltip */}
+      <div className="tooltip-container">
+        <Handle
+          type="target"
+          position={Position.Top}
+          id="in"
+          className="w-4 h-4 rounded-full bg-gray-400 border-2 border-white hover:bg-gray-600 transition-colors cursor-crosshair"
+        />
+        <div className="tooltip">Input Connection</div>
+      </div>
 
-      {/* Input handle */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="in"
-        className="w-3 h-3 rounded-full bg-gray-400 border-2 border-white"
-      />
+      {/* Output handle with tooltip */}
+      <div className="tooltip-container">
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="out"
+          className="w-4 h-4 rounded-full bg-gray-400 border-2 border-white hover:bg-gray-600 transition-colors cursor-crosshair"
+        />
+        <div className="tooltip">Output Connection</div>
+      </div>
 
       {/* Delete button - only visible when not read-only */}
       {onDeleteNode && (
@@ -105,6 +185,7 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
             e.stopPropagation();
             onDeleteNode(id);
           }}
+          title="Remove Node"
         >
           <X size={12} />
         </button>
@@ -113,13 +194,14 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
       <div className="flex flex-col space-y-1">
         <div className="flex items-center mb-2">
           <div 
-            className="w-8 h-8 flex items-center justify-center rounded-lg mr-2"
+            className="w-8 h-8 flex items-center justify-center rounded-md mr-2"
             style={{
               backgroundColor: toolColor.bg,
               color: toolColor.text,
             }}
+            title={`Tool: ${tool}`}
           >
-            <span className="text-xs font-medium">{tool.slice(0, 2).toUpperCase()}</span>
+            {toolIconData.icon}
           </div>
           <div>
             <h3 className="text-sm font-bold">{fn}</h3>
@@ -135,7 +217,14 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
               <span className="truncate opacity-80" style={{ maxWidth: '150px' }}>
                 {typeof value === 'string' 
                   ? value.startsWith('$') 
-                    ? <span className="text-primary-600 dark:text-primary-400 font-medium">{value}</span>
+                    ? (
+                      <span className="text-primary font-medium flex items-center" title={`Input from node ${value.split('.')[0].substring(1)}`}>
+                        <svg className="w-3 h-3 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Node {value.split('.')[0].substring(1)} output
+                      </span>
+                    )
                     : value
                   : JSON.stringify(value)}
               </span>
@@ -352,7 +441,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     
     // Update parent component when nodes/edges change
     useEffect(() => {
-      if (onNodesChange) {
+      if (onNodesChange && typeof onNodesChange === 'function') {
         const workflowNodes = getWorkflowNodesFromFlow(nodes, edges);
         onNodesChange(workflowNodes);
       }
@@ -476,7 +565,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={onNodesChange as any}
           onEdgesChange={onEdgesChange}
           onConnect={!readOnly ? onConnect : undefined}
           nodeTypes={nodeTypes}
