@@ -1,5 +1,5 @@
 import React, { useState, memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -7,6 +7,7 @@ import { getToolColor } from '@/lib/agent-tools';
 import { Icons } from '../ui/icons';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 
 import { cn } from '@/lib/utils';
 
@@ -96,6 +97,9 @@ function truncateValue(value: any): string {
 
 const EnhancedToolNode = memo(({ id, data, selected }: NodeProps<ToolNodeData>) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [paramValues, setParamValues] = useState<Record<string, any>>(data.params || {});
+  const [editingParam, setEditingParam] = useState<string | null>(null);
+  const { deleteElements, setNodes } = useReactFlow();
   
   const toolColor = getToolColor(data.tool);
   const bgColor = toolColor?.bg || 'bg-gray-100';
@@ -115,6 +119,34 @@ const EnhancedToolNode = memo(({ id, data, selected }: NodeProps<ToolNodeData>) 
     running: 'bg-blue-500 animate-pulse',
     success: 'bg-green-500',
     error: 'bg-red-500'
+  };
+  
+  // Handle node deletion
+  const handleDeleteNode = () => {
+    deleteElements({ nodes: [{ id }] });
+  };
+  
+  // Handle parameter value change
+  const handleParamChange = (key: string, value: any) => {
+    const updatedParams = { ...paramValues, [key]: value };
+    setParamValues(updatedParams);
+    
+    // Update the node data
+    setNodes(nodes => 
+      nodes.map(node => 
+        node.id === id 
+          ? { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                params: updatedParams 
+              } 
+            } 
+          : node
+      )
+    );
+    
+    setEditingParam(null);
   };
   
   return (
@@ -197,13 +229,33 @@ const EnhancedToolNode = memo(({ id, data, selected }: NodeProps<ToolNodeData>) 
                     Parameters
                   </AccordionTrigger>
                   <AccordionContent className="px-3 pb-2 pt-0">
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {Object.entries(data.params || {}).map(([key, value]) => (
-                        <div key={key} className="flex justify-between text-xs">
+                        <div key={key} className="flex justify-between items-center text-xs">
                           <span className="font-medium opacity-80">{key}:</span>
-                          <span className="opacity-70 max-w-[65%] truncate" title={String(value)}>
-                            {truncateValue(value)}
-                          </span>
+                          {editingParam === key ? (
+                            <Input
+                              className="h-6 text-xs ml-2 w-[65%] py-1"
+                              defaultValue={String(value)}
+                              autoFocus
+                              onBlur={(e) => handleParamChange(key, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleParamChange(key, e.currentTarget.value);
+                                } else if (e.key === 'Escape') {
+                                  setEditingParam(null);
+                                }
+                              }}
+                            />
+                          ) : (
+                            <span 
+                              className="opacity-70 max-w-[65%] truncate cursor-pointer hover:bg-background/40 px-1 rounded"
+                              title={`Click to edit: ${String(value)}`}
+                              onClick={() => setEditingParam(key)}
+                            >
+                              {truncateValue(value)}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -264,7 +316,15 @@ const EnhancedToolNode = memo(({ id, data, selected }: NodeProps<ToolNodeData>) 
           
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button size="icon" variant="destructive" className="h-6 w-6 rounded-full shadow-md">
+              <Button 
+                size="icon" 
+                variant="destructive" 
+                className="h-6 w-6 rounded-full shadow-md"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteNode();
+                }}
+              >
                 <Icons.trash className="h-3 w-3" />
               </Button>
             </TooltipTrigger>

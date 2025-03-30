@@ -12,7 +12,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   Connection,
-  OnConnectStart
+  OnConnectStart,
+  useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { WorkflowNode } from '@shared/schema';
@@ -218,18 +219,21 @@ export function IntegratedWorkflowBuilder({
   
   // Handle selecting a node type from the context menu
   const handleNodeTypeSelect = useCallback((nodeType: any) => {
-    if (!reactFlowInstance || !sourceNodeForConnection) return;
+    if (!reactFlowInstance) return;
     
     // Create a unique ID for the new node
     const nodeId = `${nodeType.id}-${Date.now()}`;
     
+    // Get position from reactFlowInstance
+    const position = reactFlowInstance.screenToFlowPosition({
+      x: contextMenuPosition!.x,
+      y: contextMenuPosition!.y
+    });
+    
     // Create the new node at the context menu position
     const newNode = {
       id: nodeId,
-      position: reactFlowInstance.project({
-        x: contextMenuPosition!.x,
-        y: contextMenuPosition!.y
-      }),
+      position,
       data: {
         label: nodeType.name,
         tool: nodeType.id.split('-')[0], // Extract the tool name from the ID
@@ -242,23 +246,25 @@ export function IntegratedWorkflowBuilder({
     // Add the new node
     setNodes(nds => [...nds, newNode]);
     
-    // Connect the source node to the new node
-    setEdges(eds => {
-      // First remove any existing edges from the source node
-      const filteredEdges = eds.filter(e => e.source !== sourceNodeForConnection);
-      // Add the new edge
-      return [
-        ...filteredEdges,
-        {
-          id: `${sourceNodeForConnection}-${nodeId}`,
-          source: sourceNodeForConnection,
-          target: nodeId,
-          animated: true,
-          style: { stroke: '#8080ff' },
-          type: 'smoothstep'
-        }
-      ];
-    });
+    // If we have a source node (from dragging a connection), connect it to the new node
+    if (sourceNodeForConnection) {
+      setEdges(eds => {
+        // First remove any existing edges from the source node
+        const filteredEdges = eds.filter(e => e.source !== sourceNodeForConnection);
+        // Add the new edge
+        return [
+          ...filteredEdges,
+          {
+            id: `${sourceNodeForConnection}-${nodeId}`,
+            source: sourceNodeForConnection,
+            target: nodeId,
+            animated: true,
+            style: { stroke: '#8080ff' },
+            type: 'smoothstep'
+          }
+        ];
+      });
+    }
     
     // Clear the context menu
     setContextMenuPosition(null);
@@ -275,6 +281,24 @@ export function IntegratedWorkflowBuilder({
     
     showNotification('Workflow updated', 'Workflow was updated via chat', { variant: 'success' });
   }, [setNodes, setEdges, showNotification]);
+  
+  // Handle right-click to show the node creation menu
+  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+    if (readOnly) return; // Don't show context menu in read-only mode
+    
+    event.preventDefault();
+    
+    const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
+    if (reactFlowBounds && reactFlowInstance) {
+      const position = {
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top
+      };
+      
+      // Show the node creation context menu at the right-click position
+      setContextMenuPosition(position);
+    }
+  }, [reactFlowInstance, readOnly]);
   
   // Close context menu 
   const closeContextMenu = useCallback(() => {
@@ -350,6 +374,7 @@ export function IntegratedWorkflowBuilder({
                   onConnectStart={onConnectStart}
                   onConnectEnd={onConnectEnd}
                   onInit={setReactFlowInstance}
+                  onPaneContextMenu={onPaneContextMenu}
                   connectionLineType={ConnectionLineType.SmoothStep}
                   nodeTypes={nodeTypes}
                   fitView
