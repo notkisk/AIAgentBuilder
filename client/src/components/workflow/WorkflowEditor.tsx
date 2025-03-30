@@ -360,6 +360,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         nodes.push({
           id: node.id,
           type: 'tool',
+          position: node.position || { x, y },
           data: {
             id: node.id,
             tool: node.tool,

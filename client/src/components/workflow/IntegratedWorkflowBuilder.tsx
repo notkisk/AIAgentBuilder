@@ -148,11 +148,22 @@ export function IntegratedWorkflowBuilder({
   useEffect(() => {
     // Debounce to avoid too many updates during dragging, etc.
     const timer = setTimeout(() => {
-      updateWorkflowNodes();
+      const workflowNodes = convertToWorkflowNodes(nodes, edges);
+      // Preserve node positions in the nodes data
+      const nodesWithPositions = workflowNodes.map(node => {
+        const flowNode = nodes.find(n => n.id === node.id);
+        return {
+          ...node,
+          position: flowNode?.position || { x: 0, y: 0 }
+        };
+      });
+      if (onWorkflowNodesChange) {
+        onWorkflowNodesChange(nodesWithPositions);
+      }
     }, 200);
     
     return () => clearTimeout(timer);
-  }, [nodes, edges, updateWorkflowNodes]);
+  }, [nodes, edges, onWorkflowNodesChange]);
   
   // Handle new connections between nodes
   const onConnect = useCallback((connection: Connection) => {
