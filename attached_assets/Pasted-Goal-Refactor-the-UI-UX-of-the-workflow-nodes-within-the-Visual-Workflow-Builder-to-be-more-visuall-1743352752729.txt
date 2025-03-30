@@ -1,0 +1,79 @@
+Goal: Refactor the UI/UX of the workflow nodes within the Visual Workflow Builder to be more visually appealing, informative, and user-friendly, taking direct inspiration from the provided n8n example image.
+
+Context:
+The current node design (see current_node_design.png) is functional but uses basic rectangular shapes, small generic icons, and displays raw parameter references like Node.1.output directly on the node. We want to evolve this towards the style shown in n8n_inspiration.png, which features prominent icons, rounded shapes, better information hierarchy, and clearer connection points. The application uses React and likely React Flow (or a similar library) with CSS/TailwindCSS for styling.
+
+Provided Images:
+
+current_node_design.png (Image of the current workflow builder nodes)
+
+n8n_inspiration.png (Image of the n8n node design for inspiration)
+
+Specific UI/UX Improvement Requirements:
+
+Node Shape and Styling:
+
+Requirement: Change nodes from sharp rectangles to rounded rectangles, similar to n8n.
+
+Requirement: Implement distinct background colors for nodes. This could be based on the node's function type (e.g., Input, Transformation, Output) or the specific tool used (e.g., a specific color for all 'chatgpt' nodes, another for 'gmail'). Provide a default color scheme but allow for customization.
+
+Action: Update the CSS/Tailwind classes for the node components.
+
+Prominent Tool Icons:
+
+Requirement: Replace the current small, generic icons with larger, visually distinct icons that clearly represent the tool or function of the node (e.g., a recognizable icon for 'webscraper', 'chatgpt', 'gmail'). The icon should be a primary visual element, similar to the n8n example.
+
+Action: Modify the node component structure to prominently display an icon. Integrate an icon library (like React Icons or Font Awesome) or allow for custom SVG imports. Map node types/tools to specific icons.
+
+Improved Information Hierarchy:
+
+Requirement: Adjust the text layout within the node:
+
+Make the Node Title (e.g., fetchPage, summarizeText) the most prominent text element.
+
+Display the Tool Source/Type (e.g., webscraper, chatgpt, gmail) below the title using a smaller font size or slightly muted color, similar to translate: language in the n8n example.
+
+Action: Update the text styling and layout within the node component using CSS/Tailwind.
+
+Simplified On-Node Parameter Display & User-Friendly References:
+
+Requirement: Crucially, remove the direct display of cryptic parameter references like Node.1.output or $1.output on the node face.
+
+Requirement: Simplify the information shown directly on the node canvas. Instead of listing all parameters:
+
+Option A (Minimal): Show only the node title, icon, and tool type. Parameters are configured elsewhere (see point 7).
+
+Option B (Contextual): Visually indicate which parameters are connected or configured, perhaps using small icons or badges next to the ports, rather than displaying the raw Node.X.output text.
+
+Action: Refactor the node component to display less parameter detail directly. Implement the chosen simplified display method.
+
+Enhanced Connections and Ports:
+
+Requirement: Make the input/output connection ports larger, clearer circles, similar to n8n.
+
+Requirement: Use solid connection lines instead of dotted lines. Add arrowheads to the lines to clearly indicate the direction of data flow.
+
+Requirement: Implement clear hover states for ports (e.g., increase size, change color) to indicate interactivity.
+
+Action: Update the styling for connection ports (handles in React Flow) and edges (connections). Ensure edge options include arrowheads.
+
+Visual Feedback for Connections:
+
+Requirement: When dragging a connection from an output port, visually highlight compatible input ports on other nodes. Provide clear visual feedback during the connection drag (show the line being drawn).
+
+Action: Leverage the features of the graph library (e.g., React Flow's isValidConnection prop and connection line styling) to implement this feedback.
+
+(Recommended) Dedicated Parameter Configuration Panel:
+
+Requirement: To properly address the removal of complex parameters (like Node.X.output) from the node face and provide a user-friendly editing experience, implement a separate configuration panel. Clicking a node on the canvas should open this panel (e.g., sliding in from the side or appearing as a modal).
+
+Requirement: This panel should display all configurable parameters for the selected node using appropriate input fields (text inputs, dropdowns, etc.).
+
+Requirement: Crucially, this panel is where the user-friendly input linking should occur. Instead of typing Node.X.output, the user should be able to select available outputs from preceding, connected nodes via a dropdown or a visual picker.
+
+Action: Create a new NodeConfigPanel component. Implement state management to show/hide the panel and populate it with the selected node's data. Implement the user-friendly input variable selection mechanism within this panel.
+
+Technology Stack: React, CSS/TailwindCSS, React Flow (or specified graph library).
+
+Deliverable:
+Provide refactored React component code for the Nodes, updated CSS/Tailwind classes reflecting the new design, suggestions or snippets for configuring the graph library (React Flow) for improved ports/connections, and the structure/logic for the recommended NodeConfigPanel including the user-friendly input linking mechanism. Explain how node types map to icons and colors.

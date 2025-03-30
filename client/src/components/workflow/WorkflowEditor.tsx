@@ -15,6 +15,7 @@ import ReactFlow, {
   useReactFlow,
   Connection,
   addEdge,
+  ConnectionLineType
 } from 'reactflow';
 import { getToolColor } from '@/lib/agent-tools';
 import { 
@@ -39,9 +40,13 @@ import {
 } from "@/components/ui/select";
 import { X } from 'lucide-react';
 import { WorkflowNode, WorkflowNodes } from '@shared/schema';
+import EnhancedToolNode from './EnhancedToolNode';
 
 // Import React Flow styles
 import 'reactflow/dist/style.css';
+
+// Add some custom styles for the flow connections
+import './workflowStyles.css';
 
 interface WorkflowEditorProps {
   initialNodes?: WorkflowNode[];
@@ -253,7 +258,7 @@ const ToolNode = ({ data, selected, id }: NodeProps) => {
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
-  tool: ToolNode,
+  tool: EnhancedToolNode,
 };
 
 // Convert internal React Flow nodes to our data format
@@ -341,15 +346,26 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         const x = startX + index * nodeGap;
         const y = levelInt * levelGap;
         
+        // Calculate available inputs for this node
+        const availableInputs = workflowNodes
+          .filter(inputNode => inputNode.id !== node.id)
+          .map(inputNode => ({
+            nodeId: inputNode.id,
+            function: inputNode.function,
+            label: `${inputNode.tool}:${inputNode.function}`,
+          }));
+        
         nodes.push({
           id: node.id,
           type: 'tool',
           data: {
+            id: node.id,
             tool: node.tool,
             function: node.function,
             params: node.params,
             onConfigureNode: !readOnly && handleConfigureNode ? handleConfigureNode : undefined,
             onDeleteNode: !readOnly && handleDeleteNode ? handleDeleteNode : undefined,
+            availableInputs,
           },
           position: { x, y },
         });
@@ -442,8 +458,14 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
     // Update parent component when nodes/edges change
     useEffect(() => {
       if (onNodesChange && typeof onNodesChange === 'function') {
+        // Convert to our workflow format before sending to parent component
         const workflowNodes = getWorkflowNodesFromFlow(nodes, edges);
-        onNodesChange(workflowNodes);
+        
+        try {
+          onNodesChange(workflowNodes);
+        } catch (err) {
+          console.error('Error updating nodes:', err);
+        }
       }
     }, [nodes, edges, onNodesChange]);
     
@@ -488,16 +510,25 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       // Generate a unique ID for the new node
       const newId = `node_${Date.now()}`;
       
+      // Calculate available inputs for this node
+      const availableInputs = nodes.map(node => ({
+        nodeId: node.id,
+        function: node.data.function,
+        label: `${node.data.tool}:${node.data.function}`,
+      }));
+      
       // Add the new node
       const newNode: Node = {
         id: newId,
         type: 'tool',
         data: {
+          id: newId,
           tool: selectedTool,
           function: selectedFunction,
           params: defaultParams,
           onConfigureNode: handleConfigureNode,
           onDeleteNode: handleDeleteNode,
+          availableInputs,
         },
         position: { 
           x: Math.random() * 300, 
