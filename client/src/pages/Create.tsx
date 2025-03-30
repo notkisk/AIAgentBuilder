@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import ChatInterface from "@/components/chat/ChatInterface";
 import WorkflowEditor from "@/components/workflow/WorkflowEditor";
+import IntegratedWorkflowBuilder from "@/components/workflow/IntegratedWorkflowBuilder";
 import { isAIProviderConfigured } from "@/lib/ai-service";
 import { WorkflowNode, WorkflowNodes } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
@@ -250,104 +251,102 @@ export default function Create() {
         </p>
       </div>
 
+      <Card className="flex-1 flex flex-col">
+        <CardHeader>
+          <CardTitle>AI-Powered Workflow Builder</CardTitle>
+          <CardDescription>
+            Build your workflow visually or use natural language to modify it.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col space-y-6 p-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="agent-name">Agent Name</Label>
+              <Input 
+                id="agent-name" 
+                placeholder="My Agent" 
+                value={agentName}
+                onChange={(e) => {
+                  setAgentName(e.target.value);
+                  // Synchronize workflow name with agent name
+                  setWorkflowName(e.target.value);
+                }}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="agent-description">Description</Label>
+              <Textarea 
+                id="agent-description" 
+                placeholder="Describe what this agent does" 
+                className="min-h-[80px]"
+                value={agentDescription}
+                onChange={(e) => {
+                  setAgentDescription(e.target.value);
+                  // Synchronize workflow description with agent description
+                  setWorkflowDescription(e.target.value);
+                }}
+              />
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 mb-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={loadExampleWebScraper}
+              className="text-sm"
+            >
+              Load Example Workflow
+            </Button>
+            
+            {hasAiProvider && (
+              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                AI-Powered 
+                {hasOpenAI && hasAnthropic 
+                  ? " (OpenAI + Anthropic)" 
+                  : hasOpenAI 
+                    ? " (OpenAI)" 
+                    : " (Anthropic)"}
+              </Badge>
+            )}
+          </div>
+          
+          <div className="flex-1 min-h-[500px] border rounded-md overflow-hidden">
+            <IntegratedWorkflowBuilder 
+              initialNodes={workflowNodes || []}
+              onNodesChange={handleNodesChange}
+              availableTools={availableTools}
+            />
+          </div>
+        </CardContent>
+        <CardFooter className="border-t pt-6 mt-4">
+          <Button 
+            className="ml-auto"
+            disabled={
+              !agentName || 
+              !agentDescription || 
+              !workflowName || 
+              !workflowDescription || 
+              !workflowNodes || workflowNodes.length === 0 || 
+              createMutation.isPending
+            }
+            onClick={() => createMutation.mutate()}
+          >
+            {createMutation.isPending ? "Creating..." : "Create Agent"}
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      {/* Keep the examples and how-it-works tabs as separate views */}
       <Tabs
-        defaultValue="chat"
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="flex-1 flex flex-col"
+        defaultValue="examples"
+        className="mt-6 hidden" // Hidden by default, could be toggled by a button
       >
         <TabsList className="mb-4 w-auto self-start">
-          <TabsTrigger value="chat">Chat Builder</TabsTrigger>
-          <TabsTrigger value="visual">Visual Builder</TabsTrigger>
           <TabsTrigger value="examples">Examples</TabsTrigger>
           <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="chat" className="flex-1 flex flex-col data-[state=active]:flex data-[state=inactive]:hidden">
-          <Card className="flex-1 flex flex-col overflow-hidden">
-            <CardContent className="flex-1 p-0 flex flex-col overflow-hidden">
-              <ChatInterface />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="visual" className="flex-1 flex flex-col data-[state=active]:flex data-[state=inactive]:hidden">
-          <Card className="flex-1 flex flex-col">
-            <CardHeader>
-              <CardTitle>Visual Workflow Builder</CardTitle>
-              <CardDescription>
-                Visually design your agent's workflow by adding and connecting tool nodes.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col space-y-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="agent-name">Agent Name</Label>
-                  <Input 
-                    id="agent-name" 
-                    placeholder="My Agent" 
-                    value={agentName}
-                    onChange={(e) => {
-                      setAgentName(e.target.value);
-                      // Synchronize workflow name with agent name
-                      setWorkflowName(e.target.value);
-                    }}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="agent-description">Description</Label>
-                  <Textarea 
-                    id="agent-description" 
-                    placeholder="Describe what this agent does" 
-                    className="min-h-[80px]"
-                    value={agentDescription}
-                    onChange={(e) => {
-                      setAgentDescription(e.target.value);
-                      // Synchronize workflow description with agent description
-                      setWorkflowDescription(e.target.value);
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-sm font-medium">Workflow Canvas</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={loadExampleWebScraper}
-                  className="text-xs"
-                >
-                  Load Example Workflow
-                </Button>
-              </div>
-              <div className="p-1 bg-gray-50 dark:bg-gray-900 rounded-md h-[500px] border">
-                <WorkflowEditor 
-                  initialNodes={workflowNodes || []}
-                  onNodesChange={handleNodesChange}
-                  availableTools={availableTools}
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-6 mt-4">
-              <Button 
-                className="ml-auto"
-                disabled={
-                  !agentName || 
-                  !agentDescription || 
-                  !workflowName || 
-                  !workflowDescription || 
-                  !workflowNodes || workflowNodes.length === 0 || 
-                  createMutation.isPending
-                }
-                onClick={() => createMutation.mutate()}
-              >
-                {createMutation.isPending ? "Creating..." : "Create Agent"}
-              </Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
         
         <TabsContent value="examples" className="space-y-4 data-[state=active]:flex data-[state=inactive]:hidden flex-col">
           <Card>

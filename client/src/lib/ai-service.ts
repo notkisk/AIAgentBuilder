@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { WorkflowNodes } from "@shared/schema";
+import { WorkflowNodes, WorkflowNode } from "@shared/schema";
 import { apiRequest } from "./queryClient";
 
 // Helper function to get API key from environment or local storage
@@ -117,10 +117,11 @@ export function isAIProviderConfigured(provider: AIProvider): boolean {
 }
 
 /**
- * Generate a workflow from a text prompt
+ * Generate a workflow from a text prompt or modify an existing workflow
  */
 export async function generateWorkflow(
   prompt: string,
+  existingNodes?: WorkflowNode[], // Optional existing nodes for modification
   provider: AIProvider = "openai"
 ): Promise<{
   name: string;
@@ -131,6 +132,7 @@ export async function generateWorkflow(
     // First try to use the server-side API to generate the workflow
     const response = await apiRequest("POST", "/api/generate-workflow", {
       prompt,
+      existingNodes
     });
 
     // Parse the response data
@@ -144,8 +146,58 @@ export async function generateWorkflow(
     // If server-side generation fails, fall back to client-side generation
     console.warn("Server-side workflow generation failed, using client-side fallback");
     
-    // Prepare the system prompt
-    const systemPrompt = `You are an expert workflow generator assistant. 
+    // Determine if we're creating a new workflow or modifying an existing one
+    const isModification = existingNodes && existingNodes.length > 0;
+    
+    // Prepare the system prompt - different for creation vs modification
+    let systemPrompt = "";
+    
+    if (isModification) {
+      systemPrompt = `You are an expert workflow modifier assistant.
+Your task is to modify an existing workflow based on user instructions.
+The user will provide modification instructions and you'll update the existing workflow accordingly.
+
+Each node has:
+- id: A unique identifier (string)
+- tool: The tool to use (e.g., "webscraper", "chatgpt", "gmail")
+- function: The function to call (e.g., "fetchPage", "summarizeText")
+- params: Input parameters for the function (object with key-value pairs)
+- next: ID of the next node (string, optional - if omitted, this is the final node)
+
+Parameter values can reference outputs from previous nodes using the syntax: $nodeId.output
+
+EXISTING WORKFLOW:
+${JSON.stringify(existingNodes, null, 2)}
+
+RESPOND ONLY WITH A VALID JSON OBJECT with the updated workflow:
+{
+  "nodes": {
+    "nodes": [
+      {
+        "id": "1",
+        "tool": "toolName",
+        "function": "functionName",
+        "params": { "param1": "value1" },
+        "next": "2"
+      },
+      ...
+    ]
+  }
+}
+
+Available tools and functions:
+- webscraper: fetchPage(url), extractText(selector), extractLinks(selector)
+- chatgpt: generateText(prompt), summarizeText(text), analyzeText(text)
+- anthropic: generateText(prompt), summarizeText(text)
+- gmail: sendEmail(to, subject, body), readEmails(filter), getAttachments(emailId)
+- google_calendar: createEvent(title, start, end), listEvents(start, end)
+- google_sheets: readData(spreadsheetId, range), writeData(spreadsheetId, range, data)
+- slack: sendMessage(channel, text), readMessages(channel, count)
+- twitter: postTweet(text), searchTweets(query)
+- database: query(sql), insert(table, data), update(table, data, condition)
+- file_system: readFile(path), writeFile(path, content), listFiles(directory)`;
+    } else {
+      systemPrompt = `You are an expert workflow generator assistant. 
 Your task is to convert user instructions into a workflow configuration.
 A workflow consists of connected nodes, where each node represents a tool/function call.
 Nodes can pass their outputs to subsequent nodes as inputs.
@@ -188,9 +240,10 @@ Available tools and functions:
 - twitter: postTweet(text), searchTweets(query)
 - database: query(sql), insert(table, data), update(table, data, condition)
 - file_system: readFile(path), writeFile(path, content), listFiles(directory)`;
+    }
 
     // Generate workflow configuration based on the provider
-    if (provider === "openai" && isAIProviderConfigured(provider)) {
+    if (provider === "openai" && isAIProviderConfigured("openai")) {
       const openaiClient = getOpenAIClient();
       const completion = await openaiClient.chat.completions.create({
         model: "gpt-4o",
@@ -203,12 +256,23 @@ Available tools and functions:
 
       const content = completion.choices[0].message.content || "{}";
       const workflowConfig = JSON.parse(content);
-      return {
-        name: workflowConfig.name || "Generated Workflow",
-        description: workflowConfig.description || `Workflow generated from: ${prompt}`,
-        nodes: workflowConfig.nodes || { nodes: [] }
-      };
-    } else if (provider === "anthropic" && isAIProviderConfigured(provider)) {
+      
+      if (isModification) {
+        // For modifications, return minimal structure with just the updated nodes
+        return {
+          name: "Modified Workflow",
+          description: `Workflow modified based on: ${prompt}`,
+          nodes: workflowConfig.nodes || { nodes: existingNodes || [] }
+        };
+      } else {
+        // For new workflows, return the complete structure
+        return {
+          name: workflowConfig.name || "Generated Workflow",
+          description: workflowConfig.description || `Workflow generated from: ${prompt}`,
+          nodes: workflowConfig.nodes || { nodes: [] }
+        };
+      }
+    } else if (provider === "anthropic" && isAIProviderConfigured("anthropic")) {
       const anthropicClient = getAnthropicClient();
       const message = await anthropicClient.messages.create({
         model: "claude-3-7-sonnet-20250219",
@@ -229,13 +293,35 @@ Available tools and functions:
       }
       
       const workflowConfig = JSON.parse(text || "{}");
-      return {
-        name: workflowConfig.name || "Generated Workflow",
-        description: workflowConfig.description || `Workflow generated from: ${prompt}`,
-        nodes: workflowConfig.nodes || { nodes: [] }
-      };
+      
+      if (isModification) {
+        // For modifications, return minimal structure with just the updated nodes
+        return {
+          name: "Modified Workflow",
+          description: `Workflow modified based on: ${prompt}`,
+          nodes: workflowConfig.nodes || { nodes: existingNodes || [] }
+        };
+      } else {
+        // For new workflows, return the complete structure
+        return {
+          name: workflowConfig.name || "Generated Workflow",
+          description: workflowConfig.description || `Workflow generated from: ${prompt}`,
+          nodes: workflowConfig.nodes || { nodes: [] }
+        };
+      }
     } else {
-      throw new Error(`AI provider ${provider} is not configured or not supported`);
+      // Check which providers are configured
+      const openAIConfigured = isAIProviderConfigured("openai");
+      const anthropicConfigured = isAIProviderConfigured("anthropic");
+      
+      // Try an alternative provider if available
+      if (provider === "openai" && anthropicConfigured) {
+        return generateWorkflow(prompt, existingNodes, "anthropic");
+      } else if (provider === "anthropic" && openAIConfigured) {
+        return generateWorkflow(prompt, existingNodes, "openai");
+      }
+      
+      throw new Error(`No AI provider is configured. Please configure OpenAI or Anthropic API keys.`);
     }
   }
 }

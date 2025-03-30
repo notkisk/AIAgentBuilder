@@ -1,0 +1,55 @@
+**Goal:** Refactor the application UI to merge the Chat interface and the Visual Workflow Builder into a single, integrated window. Implement a prompt-driven workflow editing experience where users can modify the visual workflow by interacting with the chat.
+
+**Context:**
+Currently, the application might have separate views for chat and the visual builder (using React and likely React Flow or a similar library). The goal is to create a unified interface where a chat panel can be expanded/collapsed over the workflow canvas, and chat prompts directly trigger updates to the visual workflow.
+
+**Desired UI/UX Behavior:**
+
+1.  **Single Window Layout:** Eliminate separate views. The primary view is the Visual Workflow Builder canvas.
+2.  **Floating Chat Input:**
+    *   Implement a minimal, floating chat input bar (or an icon button) anchored at the bottom of the screen (e.g., bottom-center). It should be unobtrusive when the user is focused on the canvas.
+3.  **Expandable Chat Panel:**
+    *   On clicking/focusing the floating input/icon, smoothly animate (e.g., slide up) a chat panel from the bottom.
+    *   This panel should occupy a significant portion of the screen height (e.g., 40-50%).
+    *   The workflow canvas above should smoothly resize to fill the remaining vertical space.
+    *   The chat panel must contain:
+        *   A scrollable area for displaying chat message history (user prompts and AI responses).
+        *   A text input field for the user to type prompts.
+        *   A "Send" button.
+4.  **Collapsible Chat Panel:**
+    *   Include a clear "minimize" or "close" icon within the expanded chat panel.
+    *   Clicking this icon should smoothly animate the panel back down, returning to the minimal floating input/icon state.
+5.  **Animation:** Use smooth CSS transitions or a library like `framer-motion` for the expand/collapse animation to make the experience feel natural.
+
+**Prompt-Driven Workflow Interaction Logic (Frontend Responsibilities):**
+
+1.  **Send Prompts:** When the user sends a message from the chat input:
+    *   Display the user's message in the chat history.
+    *   Send the text prompt to the backend/AI agent API endpoint responsible for processing workflow modification requests.
+2.  **Receive Updates:**
+    *   Listen for responses from the backend. These responses should include:
+        *   A text message to display in the chat history (e.g., confirmation, clarification question).
+        *   **(Crucially)** The *complete updated workflow definition* (e.g., a new array of nodes and edges reflecting the changes requested in the prompt).
+3.  **Update Canvas:**
+    *   When the updated workflow definition is received, update the state managed by the graph library (e.g., React Flow's `nodes` and `edges` props/state).
+    *   The graph library should automatically re-render the canvas to visually reflect the changes (new nodes appearing, connections changing, etc.).
+4.  **Display Feedback:** Show the AI's text response in the chat history.
+
+**(Assumption:** A backend service exists that takes a text prompt and the current workflow state, and returns a text response and the modified workflow data structure.)
+
+**Implementation Tasks:**
+
+1.  **Modify Layout:** Restructure the main application component to host both the canvas and the chat elements within a single view.
+2.  **Create Chat Components:**
+    *   Build the `FloatingChatInput` component (or icon button).
+    *   Build the `ChatPanel` component (including message list, input field, send button, minimize button).
+3.  **Implement State Management:** Manage the expanded/collapsed state of the chat panel. Manage the chat message history.
+4.  **Add Animation:** Integrate smooth animations for the panel's expand/collapse transition.
+5.  **Integrate API Calls:** Implement the logic to send prompts to the backend API and handle the responses.
+6.  **Connect State to Canvas:** Ensure the received workflow data updates the state variables controlling the React Flow (or equivalent) component, triggering visual updates.
+7.  **(Optional) Visual Highlighting:** Implement logic to briefly highlight changed elements on the canvas after an update.
+
+**Technology Stack:** React, CSS/TailwindCSS, React Flow (or specified graph library), potentially `framer-motion` for animations.
+
+**Deliverable:**
+Provide refactored React component code (functional components with hooks preferred) for the main layout, floating input, and chat panel. Include state management logic (e.g., using `useState`, `useReducer`, or a state management library), API interaction snippets (using `fetch` or `axios`), CSS/Tailwind classes for styling and layout, and animation implementation details. Explain how the received workflow data updates the visual canvas.
