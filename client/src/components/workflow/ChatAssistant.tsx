@@ -89,15 +89,18 @@ export function ChatAssistant({
 
       const responseData = await response.json();
 
-      // Add assistant response
-      const assistantMessage: Message = {
+      // Process the JSON response from AI but don't display it
+      const aiResponse = responseData.message;
+      
+      // Only add status message to chat
+      const statusMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: responseData.message || "I couldn't process your request.",
+        content: 'Processing your request...',
         timestamp: new Date()
       };
-
-      setMessages(prev => [...prev, assistantMessage]);
+      
+      setMessages(prev => [...prev, statusMessage]);
 
       // If workflow was updated, notify parent component
       if (responseData.updatedWorkflow) {
