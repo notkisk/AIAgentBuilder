@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 // Hook to detect if the current device is mobile
-export function useIsMobile() {
+export const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
