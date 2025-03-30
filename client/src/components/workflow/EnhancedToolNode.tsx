@@ -17,8 +17,11 @@ import {
   Code,
   ExternalLink,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  HelpCircle,
+  Info
 } from 'lucide-react';
+import { NodeExplanationTooltip } from './NodeExplanationTooltip';
 
 type NodeParams = Record<string, string | number | boolean | null>;
 
@@ -158,6 +161,7 @@ const getToolIcon = (toolName: string): ToolIconData => {
 const EnhancedToolNode = ({ data, selected, id }: NodeProps<ToolNodeData>) => {
   const [expanded, setExpanded] = useState(false);
   const [validationStatus, setValidationStatus] = useState<'none' | 'valid' | 'warning' | 'error'>('none');
+  const [showExplanation, setShowExplanation] = useState(false);
   
   // Extract data
   const tool = data.tool;
@@ -294,6 +298,26 @@ const EnhancedToolNode = ({ data, selected, id }: NodeProps<ToolNodeData>) => {
             </div>
             <p className="text-xs opacity-70 truncate capitalize">{tool}</p>
           </div>
+
+          {/* Help/Info button */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button 
+                  className="ml-1 p-1 rounded-full hover:bg-yellow-100 dark:hover:bg-yellow-900 text-yellow-500 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowExplanation(true);
+                  }}
+                >
+                  <HelpCircle size={14} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Node Explanation</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           {/* Delete button - only visible when not read-only */}
           {onDeleteNode && (
@@ -390,6 +414,22 @@ const EnhancedToolNode = ({ data, selected, id }: NodeProps<ToolNodeData>) => {
           )}
         </div>
       </div>
+
+      {/* Explanation dialog */}
+      {showExplanation && (
+        <NodeExplanationTooltip
+          node={{
+            id,
+            tool,
+            function: fn,
+            params,
+          }}
+          isOpen={showExplanation}
+          onClose={() => setShowExplanation(false)}
+          previousNodeInfo={null}
+          nextNodeInfo={null}
+        />
+      )}
     </motion.div>
   );
 };

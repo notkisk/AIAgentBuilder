@@ -327,6 +327,188 @@ Available tools and functions:
 }
 
 /**
+ * Generate an explanation for a workflow node
+ */
+export async function generateNodeExplanation(
+  nodeData: {
+    id: string;
+    tool: string;
+    function: string;
+    params: Record<string, any>;
+  },
+  previousNodeInfo?: { id: string; function: string } | null,
+  nextNodeInfo?: { id: string; function: string } | null,
+  provider: AIProvider = "openai"
+): Promise<{
+  general: string;
+  parameters: Record<string, string>;
+  impact: string;
+  example: string;
+}> {
+  // Define mock explanations for fallback when no AI provider is available
+  const fallbackExplanations: Record<string, Record<string, any>> = {
+    webscraper: {
+      fetchPage: {
+        general: "This node retrieves content from a web page. It accesses the URL provided in the parameters and returns the full HTML content.",
+        parameters: {
+          url: "The website URL from which to fetch content. This should be a valid URL starting with http:// or https://."
+        },
+        impact: "This is typically an initial step in a workflow that requires web data. The output HTML can then be processed by subsequent nodes.",
+        example: "fetchPage('https://example.com') → Returns the full HTML from example.com"
+      },
+      extractText: {
+        general: "This node extracts specific text from HTML content using CSS selectors. It can target specific elements on a page.",
+        parameters: {
+          selector: "A CSS selector string that identifies which HTML elements to extract. For example, '.article-content' or 'h1'."
+        },
+        impact: "This helps filter out just the content you need from a web page, ignoring navigation, ads, and other elements.",
+        example: "extractText('.main-content') → Returns text from elements with class 'main-content'"
+      }
+    },
+    chatgpt: {
+      generateText: {
+        general: "This node uses AI to generate new text based on a prompt. It can create various types of content based on instructions.",
+        parameters: {
+          prompt: "Instructions for the AI about what kind of text to generate."
+        },
+        impact: "This creates new content that can be used in subsequent workflow steps or final outputs.",
+        example: "generateText('Write a product description for an eco-friendly water bottle') → Returns AI-generated product description"
+      },
+      summarizeText: {
+        general: "This node uses AI to generate a concise summary of input text. It's useful for condensing large amounts of content.",
+        parameters: {
+          text: "The input text to be summarized. This can be content from a previous node, like web content from a webscraper node."
+        },
+        impact: "This transforms long or complex content into digestible summaries.",
+        example: "summarizeText(longTextContent) → Returns a concise summary of the text"
+      }
+    }
+  };
+
+  // Create a default explanation if no specific one is found
+  const createDefaultExplanation = () => {
+    return {
+      general: `This node uses the ${nodeData.tool} tool to perform the ${nodeData.function} operation. It processes inputs and produces outputs that can be used by other nodes.`,
+      parameters: Object.fromEntries(
+        Object.entries(nodeData.params).map(([key, value]) => [
+          key,
+          `Parameter for the ${nodeData.function} operation. ${
+            typeof value === 'string' && value.startsWith('$')
+              ? `This uses output from another node (${value.split('.')[0].substring(1)}).`
+              : 'This affects how the operation is performed.'
+          }`
+        ])
+      ),
+      impact: "This node contributes to the workflow by processing data and preparing it for subsequent steps.",
+      example: `${nodeData.function}(${Object.keys(nodeData.params).map(k => `${k}: [value]`).join(', ')}) → Returns processed result`
+    };
+  };
+
+  try {
+    // First try to use the server-side API to generate the explanation
+    try {
+      const response = await apiRequest("POST", "/api/generate-node-explanation", {
+        nodeData,
+        previousNodeInfo,
+        nextNodeInfo
+      });
+
+      // Parse the response data
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.warn("Server-side node explanation generation failed, using client-side fallback");
+    }
+
+    // Client-side AI generation
+    if (isAIProviderConfigured(provider)) {
+      const systemPrompt = `You are an expert workflow node explanation assistant.
+Your task is to explain the purpose, parameters, and impact of a workflow node in a clear, concise way.
+
+The node information is as follows:
+- Tool: ${nodeData.tool}
+- Function: ${nodeData.function}
+- Parameters: ${JSON.stringify(nodeData.params)}
+${previousNodeInfo ? `- Previous node: ${previousNodeInfo.id} (${previousNodeInfo.function})` : ''}
+${nextNodeInfo ? `- Next node: ${nextNodeInfo.id} (${nextNodeInfo.function})` : ''}
+
+Respond with a JSON object containing:
+{
+  "general": "A clear explanation of what this node does",
+  "parameters": {
+    "paramName1": "What this parameter controls and how it affects the node",
+    "paramName2": "What this parameter controls and how it affects the node"
+  },
+  "impact": "How this node influences the overall workflow, including its connection to previous and next nodes if applicable",
+  "example": "A simple code-like example showing how this function works with sample values"
+}
+
+Keep your explanation concise, accurate, and helpful for someone who might not understand the technical details.`;
+
+      if (provider === "openai") {
+        const openaiClient = getOpenAIClient();
+        const completion = await openaiClient.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { 
+              role: "user", 
+              content: `Please explain the node: ${nodeData.tool}.${nodeData.function} with parameters ${JSON.stringify(nodeData.params)}`
+            }
+          ],
+          response_format: { type: "json_object" }
+        });
+
+        const content = completion.choices[0].message.content || "{}";
+        return JSON.parse(content);
+      } else if (provider === "anthropic") {
+        const anthropicClient = getAnthropicClient();
+        const message = await anthropicClient.messages.create({
+          model: "claude-3-7-sonnet-20250219",
+          system: systemPrompt,
+          max_tokens: 2000,
+          messages: [
+            { 
+              role: "user", 
+              content: `Please explain the node: ${nodeData.tool}.${nodeData.function} with parameters ${JSON.stringify(nodeData.params)}`
+            }
+          ],
+        });
+
+        // Handle different content block types
+        let text = "";
+        if (message.content && message.content.length > 0) {
+          const contentBlock = message.content[0];
+          if (contentBlock.type === 'text') {
+            text = contentBlock.text;
+          }
+        }
+        
+        return JSON.parse(text || "{}");
+      }
+    }
+
+    // Check for a tool-specific explanation in our fallback database
+    if (fallbackExplanations[nodeData.tool]?.[nodeData.function]) {
+      return fallbackExplanations[nodeData.tool][nodeData.function];
+    }
+    
+    // Return a default explanation
+    return createDefaultExplanation();
+  } catch (error) {
+    console.error("Error generating node explanation:", error);
+    
+    // Check for a tool-specific explanation in our fallback database
+    if (fallbackExplanations[nodeData.tool]?.[nodeData.function]) {
+      return fallbackExplanations[nodeData.tool][nodeData.function];
+    }
+    
+    // Return a default explanation
+    return createDefaultExplanation();
+  }
+}
+
+/**
  * Get available tools and their capabilities from an AI model
  */
 export async function getToolRecommendations(
