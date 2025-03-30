@@ -48,23 +48,35 @@
 
   /* Flow styling */
   .react-flow {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-200;
+  }
+
+  .react-flow__pane {
+    @apply bg-background transition-colors duration-200;
   }
 
   .react-flow__node {
-    @apply bg-card text-card-foreground border-border;
+    @apply bg-card text-card-foreground border-border transition-colors duration-200;
   }
 
   .react-flow__controls {
-    @apply bg-background border-border;
+    @apply bg-background border-border transition-colors duration-200;
   }
 
   .react-flow__controls-button {
-    @apply border-border fill-foreground hover:bg-muted;
+    @apply border-border fill-foreground hover:bg-muted transition-colors duration-200;
   }
 
   .react-flow__minimap {
-    @apply bg-background;
+    @apply bg-background transition-colors duration-200;
+  }
+
+  .react-flow__edge-path {
+    @apply stroke-foreground transition-colors duration-200;
+  }
+
+  .react-flow__handle {
+    @apply bg-card border-border transition-colors duration-200;
   }
 
   /* ReactFlow Node Tooltips */
