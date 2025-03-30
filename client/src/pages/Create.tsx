@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,12 +16,21 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
 import { useWorkflow } from "@/contexts/WorkflowContext";
+import React, { useState as useState2 } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function Create() {
   const [activeTab, setActiveTab] = useState("chat");
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  
+  const [saveDialogOpen, setSaveDialogOpen] = useState2(false);
+
   // Check if we have AI providers configured
   const hasOpenAI = isAIProviderConfigured("openai");
   const hasAnthropic = isAIProviderConfigured("anthropic");
@@ -36,7 +45,6 @@ export default function Create() {
     agentDescription, setAgentDescription
   } = useWorkflow();
   
-  // Create example workflows
   const loadExampleWebScraper = () => {
     setAgentName("Website Content Monitor");
     setAgentDescription("Monitors a website for changes, summarizes new content with AI, and sends email notifications");
@@ -71,7 +79,7 @@ export default function Create() {
     ]);
   };
   
-  // Sample available tools
+
   const availableTools = [
     {
       name: "gmail",
@@ -155,22 +163,21 @@ export default function Create() {
     }
   ];
   
-  // Handle workflow node changes
+
   const handleNodesChange = (nodes: WorkflowNode[]) => {
     setWorkflowNodes(nodes);
   };
   
-  // Effect to automatically switch to Visual Builder tab when workflows are loaded
+
   useEffect(() => {
     if (workflowNodes && workflowNodes.length > 0 && activeTab === "chat") {
       setActiveTab("visual");
     }
   }, [workflowNodes, activeTab]);
   
-  // Create agent and workflow mutation
+
   const createMutation = useMutation({
     mutationFn: async () => {
-      // First create the workflow
       const workflowResponse = await apiRequest(
         'POST',
         '/api/workflows',
@@ -190,7 +197,6 @@ export default function Create() {
       
       const workflow = await workflowResponse.json();
       
-      // Then create the agent linked to the workflow
       const agentResponse = await apiRequest(
         'POST',
         '/api/agents',
@@ -218,7 +224,6 @@ export default function Create() {
         variant: "default",
       });
       
-      // Navigate to the agent detail page
       navigate(`/agents/${data.id}`);
     },
     onError: (error) => {
@@ -230,6 +235,12 @@ export default function Create() {
     }
   });
   
+
+  const handleSave = () => {
+    createMutation.mutate();
+    setSaveDialogOpen(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="mb-6">
@@ -259,37 +270,6 @@ export default function Create() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col space-y-6 p-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="agent-name">Agent Name</Label>
-              <Input 
-                id="agent-name" 
-                placeholder="My Agent" 
-                value={agentName}
-                onChange={(e) => {
-                  setAgentName(e.target.value);
-                  // Synchronize workflow name with agent name
-                  setWorkflowName(e.target.value);
-                }}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="agent-description">Description</Label>
-              <Textarea 
-                id="agent-description" 
-                placeholder="Describe what this agent does" 
-                className="min-h-[80px]"
-                value={agentDescription}
-                onChange={(e) => {
-                  setAgentDescription(e.target.value);
-                  // Synchronize workflow description with agent description
-                  setWorkflowDescription(e.target.value);
-                }}
-              />
-            </div>
-          </div>
-          
           <div className="flex items-center gap-2 mb-2">
             <Button 
               variant="outline" 
@@ -319,29 +299,57 @@ export default function Create() {
               availableTools={availableTools}
             />
           </div>
-        </CardContent>
-        <CardFooter className="border-t pt-6 mt-4">
           <Button 
-            className="ml-auto"
-            disabled={
-              !agentName || 
-              !agentDescription || 
-              !workflowName || 
-              !workflowDescription || 
-              !workflowNodes || workflowNodes.length === 0 || 
-              createMutation.isPending
-            }
-            onClick={() => createMutation.mutate()}
+            onClick={() => setSaveDialogOpen(true)}
+            className="mt-4"
           >
-            {createMutation.isPending ? "Creating..." : "Create Agent"}
+            Save Agent
           </Button>
-        </CardFooter>
+        </CardContent>
       </Card>
-      
+
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Agent</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="agent-name">Agent Name</Label>
+              <Input 
+                id="agent-name" 
+                placeholder="My Agent" 
+                value={agentName}
+                onChange={(e) => {
+                  setAgentName(e.target.value);
+                  setWorkflowName(e.target.value);
+                }}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="agent-description">Description</Label>
+              <Textarea 
+                id="agent-description" 
+                placeholder="Describe what this agent does" 
+                className="min-h-[80px]"
+                value={agentDescription}
+                onChange={(e) => {
+                  setAgentDescription(e.target.value);
+                  setWorkflowDescription(e.target.value);
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSave}>Save Agent</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Keep the examples and how-it-works tabs as separate views */}
       <Tabs
         defaultValue="examples"
-        className="mt-6 hidden" // Hidden by default, could be toggled by a button
+        className="mt-6 hidden" 
       >
         <TabsList className="mb-4 w-auto self-start">
           <TabsTrigger value="examples">Examples</TabsTrigger>
