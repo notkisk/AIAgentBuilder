@@ -124,7 +124,8 @@ export function IntegratedWorkflowBuilder({
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { width, height } = useResizeObserver({ ref: containerRef });
+  // Using a regular ref instead of resize observer
+  const { width, height } = { width: 0, height: 0 }; // placeholder values
   const { showNotification } = useNotification();
   
   // Update edges whenever nodes change connections
@@ -176,8 +177,10 @@ export function IntegratedWorkflowBuilder({
   }, [setEdges]);
   
   // Handle starting a connection drag
-  const onConnectStart = useCallback((_event: any, { nodeId }: { nodeId: string }) => {
-    setSourceNodeForConnection(nodeId);
+  const onConnectStart = useCallback((event: React.MouseEvent, params: any) => {
+    if (params.nodeId) {
+      setSourceNodeForConnection(params.nodeId);
+    }
   }, []);
   
   // Handle ending a connection drag without connecting to a target
