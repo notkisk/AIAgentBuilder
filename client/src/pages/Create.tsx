@@ -257,12 +257,12 @@ export default function Create() {
             </Badge>
           )}
         </div>
-        <p className="text-gray-600 dark:text-gray-300">
+        <p className="text-muted-foreground">
           Describe what you want your agent to do in natural language, and we'll create a workflow for you.
         </p>
       </div>
 
-      <Card className="rounded-lg border bg-background text-foreground dark:bg-card dark:text-card-foreground shadow-sm flex-1 flex flex-col transition-colors duration-200">
+      <Card className="flex-1 flex flex-col transition-colors duration-200">
         <CardHeader>
           <CardTitle>AI-Powered Workflow Builder</CardTitle>
           <CardDescription>
@@ -281,7 +281,7 @@ export default function Create() {
             </Button>
 
             {hasAiProvider && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge variant="outline" className="bg-muted text-primary">
                 AI-Powered 
                 {hasOpenAI && hasAnthropic 
                   ? " (OpenAI + Anthropic)" 
@@ -352,7 +352,7 @@ export default function Create() {
         </TabsList>
 
         <TabsContent value="examples" className="space-y-4 data-[state=active]:flex data-[state=inactive]:hidden flex-col">
-          <Card>
+          <Card className="transition-colors duration-200">
             <CardHeader>
               <CardTitle>Email Monitor</CardTitle>
               <CardDescription>
@@ -360,9 +360,9 @@ export default function Create() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md">
+              <div className="bg-muted p-3 rounded-md">
                 <p className="font-medium">Example Prompt:</p>
-                <p className="text-gray-600 dark:text-gray-300 italic">
+                <p className="text-muted-foreground italic">
                   "Create an agent that monitors my Gmail inbox for emails containing the word 'urgent' and sends me a Slack notification when they arrive."
                 </p>
               </div>
@@ -374,7 +374,7 @@ export default function Create() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-colors duration-200">
             <CardHeader>
               <CardTitle>Website Update Tracker</CardTitle>
               <CardDescription>
@@ -382,9 +382,9 @@ export default function Create() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-md">
+              <div className="bg-muted p-3 rounded-md">
                 <p className="font-medium">Example Prompt:</p>
-                <p className="text-gray-600 dark:text-gray-300 italic">
+                <p className="text-muted-foreground italic">
                   "I need an agent that checks a website every day for changes, then summarizes the new content and emails it to me."
                 </p>
               </div>
@@ -398,14 +398,14 @@ export default function Create() {
         </TabsContent>
 
         <TabsContent value="how-it-works" className="space-y-4 data-[state=active]:flex data-[state=inactive]:hidden flex-col">
-          <Card>
+          <Card className="transition-colors duration-200">
             <CardHeader>
               <CardTitle>How AI-Generated Workflows Work</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">1. Natural Language Description</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-muted-foreground">
                   Start by describing what you want your agent to do in plain English. Be specific about the tools
                   you want to use (Gmail, Slack, OpenAI, etc.) and what actions you want the agent to take.
                 </p>
@@ -413,7 +413,7 @@ export default function Create() {
 
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">2. AI Analysis</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-muted-foreground">
                   Our system uses {hasOpenAI ? "OpenAI" : hasAnthropic ? "Anthropic" : "AI"} to analyze your description and identify the required tools and workflow steps.
                   The AI determines the optimal sequence of operations to achieve your goal.
                 </p>
@@ -421,7 +421,7 @@ export default function Create() {
 
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">3. Workflow Generation</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-muted-foreground">
                   Based on the analysis, a JSON workflow is created that defines each step in the process.
                   Each step specifies a tool, function, and parameters, with proper connections between steps.
                 </p>
@@ -429,7 +429,7 @@ export default function Create() {
 
               <div className="space-y-2">
                 <h3 className="text-lg font-medium">4. Agent Creation</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+                <p className="text-muted-foreground">
                   The workflow is converted into an agent that you can run, schedule, and monitor.
                   You can also modify the agent's configuration later if needed.
                 </p>
